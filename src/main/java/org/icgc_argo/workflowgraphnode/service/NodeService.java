@@ -1,35 +1,30 @@
 package org.icgc_argo.workflowgraphnode.service;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pivotal.rabbitmq.RabbitEndpointService;
 import com.pivotal.rabbitmq.ReactiveRabbit;
-import com.pivotal.rabbitmq.source.OnDemandSource;
-import com.pivotal.rabbitmq.source.Sender;
 import com.pivotal.rabbitmq.source.Source;
 import com.pivotal.rabbitmq.stream.Transaction;
-import com.pivotal.rabbitmq.topology.ExchangeType;
-import com.pivotal.rabbitmq.topology.TopologyBuilder;
-import lombok.Data;
+import java.time.Duration;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.Callable;
+import lombok.NonNull;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Bean;
+import org.icgc_argo.workflowgraphnode.config.TopologyConfig;
+import org.icgc_argo.workflowgraphnode.model.RunRequest;
+import org.icgc_argo.workflowgraphnode.workflow.RdpcClient;
+import org.icgc_argo.workflowgraphnode.workflow.WesClient;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Primary;
-import org.springframework.http.MediaType;
-import org.springframework.web.reactive.function.BodyInserters;
-import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.Disposable;
-import reactor.core.Disposables;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
-
-import java.io.IOException;
-import java.util.Map;
-import java.util.function.Consumer;
 
 @Slf4j
 @Configuration
@@ -38,44 +33,79 @@ public class NodeService {
   /** Constants */
   private static final ObjectMapper MAPPER = new ObjectMapper();
 
+  private static final String INGEST = "ingest";
+  private static final String QUEUED_TO_RUNNING = "runQueue";
+  private static final String RUNNING_TO_COMPLETE = "checkRunning";
+
   /** State */
-  @Value("${workflow.url}")
-  private String workflowUrl;
-
-  @Value("${workflow.service.execution.url}")
-  private String executionServiceUrl;
-
   private final Scheduler scheduler = Schedulers.newElastic("wes-scheduler");
+
+  private final Map<String, Disposable> pipelines = Collections.synchronizedMap(new HashMap<>());
 
   /** Dependencies */
   private final RabbitEndpointService rabbit;
 
-  public NodeService(RabbitEndpointService rabbit) {
+  private final RdpcClient rdpcClient;
+  private final WesClient wesClient;
+  private final TopologyConfig topologyConfig;
+  private final Source<String> runRequestSource;
+
+  @Autowired
+  public NodeService(
+      @NonNull RabbitEndpointService rabbit,
+      @NonNull RdpcClient rdpcClient,
+      @NonNull WesClient wesClient,
+      @NonNull TopologyConfig topologyConfig,
+      @NonNull Source<String> runRequestSource) {
     this.rabbit = rabbit;
+    this.rdpcClient = rdpcClient;
+    this.wesClient = wesClient;
+    this.topologyConfig = topologyConfig;
+    this.runRequestSource = runRequestSource;
+
+    startIngest();
+    startQueued();
+    startRunning();
   }
 
-  @Bean
-  public Disposable.Composite pipes(Source<String> runRequestSource) {
-    Disposable.Composite pipelines = Disposables.composite();
-    pipelines.add(ingestHttpJobs(runRequestSource));
-    pipelines.add(runQueuedJobs());
-    return pipelines;
+  public void stopIngest() {
+    pipelines.get(INGEST).dispose();
   }
 
-  @Bean
-  OnDemandSource<String> runRequests() {
-    return new OnDemandSource<>("runRequests");
+  public void stopQueued() {
+    pipelines.get(QUEUED_TO_RUNNING).dispose();
   }
 
-  @Bean
-  @Primary
-  Sender<String> runRequestsSender(OnDemandSource<String> runRequests) {
-    return runRequests;
+  public void stopRunning() {
+    pipelines.get(RUNNING_TO_COMPLETE).dispose();
+  }
+
+  public void startIngest() {
+    startPipe(INGEST, () -> ingestHttpJobs(this.runRequestSource));
+  }
+
+  public void startQueued() {
+    startPipe(QUEUED_TO_RUNNING, this::runQueuedJobs);
+  }
+
+  public void startRunning() {
+    startPipe(RUNNING_TO_COMPLETE, this::checkRunningJobs);
+  }
+
+  @SneakyThrows
+  private void startPipe(String name, Callable<Disposable> pipeBuilder) {
+    val pipe = this.pipelines.get(name);
+    if (pipe == null || pipe.isDisposed()) {
+      this.pipelines.put(name, pipeBuilder.call());
+    } else {
+      log.error("Error trying to start {} pipelines.", name);
+      throw new IllegalStateException("Cannot start pipeline as one already exists.");
+    }
   }
 
   private Disposable ingestHttpJobs(Source<String> runRequestSource) {
     return rabbit
-        .declareTopology(queueTopology())
+        .declareTopology(topologyConfig.queueTopology())
         .createTransactionalProducerStream(String.class)
         .route()
         .toExchange("node-input")
@@ -88,73 +118,51 @@ public class NodeService {
   }
 
   private Disposable runQueuedJobs() {
-    final Flux<Transaction<RunRequest>> incomingStream = rabbit
-        .declareTopology(queueTopology())
-        .createTransactionalConsumerStream("run-queue", String.class)
-        .receive()
-        .doOnNext(item -> log.info("Consumed: {}", item.get()))
-        .map(
-            tx -> {
-              try {
-                return tx.map(MAPPER.readValue(tx.get(), RunRequest.class));
-              } catch (IOException e) {
-                log.warn("Could not parse queued job event.");
-                throw new RuntimeException(e);
-              }
-            });
+    final Flux<Transaction<RunRequest>> incomingStream =
+        rabbit
+            .declareTopology(topologyConfig.queueTopology())
+            .createTransactionalConsumerStream("run-queue", String.class)
+            .receive()
+            .doOnNext(item -> log.info("Consumed: {}", item.get()))
+            .flatMap(
+                tx ->
+                    Mono.fromCallable(() -> tx.map(MAPPER.readValue(tx.get(), RunRequest.class))));
 
-    final Flux<Transaction<String>> launchedWorkflowStream = incomingStream
-      .map(tx -> tx.map(launchWorkflowWithWes(tx.get()).block()));
+    final Flux<Transaction<String>> launchedWorkflowStream =
+        incomingStream.flatMap(
+            tx ->
+                Mono.fromCallable(() -> tx.map(wesClient.launchWorkflowWithWes(tx.get()).block())));
 
-    return rabbit.declareTopology(runningTopology())
-      .createTransactionalProducerStream(String.class)
-      .route()
+    return rabbit
+        .declareTopology(topologyConfig.runningTopology())
+        .createTransactionalProducerStream(String.class)
+        .route()
         .toExchange("node-state")
-      .then()
-      .send(launchedWorkflowStream)
-      .doOnNext(stringTransaction -> log.info("Sent: {}", stringTransaction.get()))
-      .subscribeOn(scheduler)
-      .subscribe(Transaction::commit);
+        .then()
+        .send(launchedWorkflowStream)
+        .subscribeOn(scheduler)
+        .subscribe(Transaction::commit);
   }
 
-  private Consumer<TopologyBuilder> queueTopology() {
-    return topologyBuilder ->
-        topologyBuilder
-            .declareExchange("node-input")
-            .type(ExchangeType.direct)
-            .and()
-            .declareQueue("run-queue")
-            .boundTo("node-input");
-  }
+  private Disposable checkRunningJobs() {
+    final Flux<Transaction<String>> completedWorkflows =
+        rabbit
+            .declareTopology(topologyConfig.runningTopology())
+            .createTransactionalConsumerStream("running", String.class)
+            .receive()
+            .delayElements(Duration.ofSeconds(10))
+            .doOnNext(r -> log.info("Checking status of: {}", r.get()))
+            .filterWhen(tx -> rdpcClient.getWorkflowStatus(tx.get()).map("COMPLETE"::equals))
+            .doOnDiscard(Transaction.class, Transaction::reject);
 
-  private Consumer<TopologyBuilder> runningTopology() {
-    return topologyBuilder ->
-      topologyBuilder
-        .declareExchange("node-state")
-        .type(ExchangeType.direct)
-        .and()
-        .declareQueue("running")
-        .boundTo("node-state");
-  }
-
-  private Mono<String> launchWorkflowWithWes(RunRequest runRequest) {
-    runRequest.setWorkflowUrl(workflowUrl);
-    return WebClient.create()
-        .post()
-        .uri(executionServiceUrl)
-        .contentType(MediaType.APPLICATION_JSON)
-        .body(BodyInserters.fromValue(runRequest))
-        .retrieve()
-        .bodyToMono(Map.class)
-        .map(map -> map.get("run_id").toString());
-  }
-
-  @Data
-  public static class RunRequest {
-    @JsonProperty(value = "workflow_url")
-    String workflowUrl;
-
-    @JsonProperty(value = "workflow_params")
-    Map<String, Object> workflowParams;
+    return rabbit
+        .declareTopology(topologyConfig.completeTopology())
+        .createTransactionalProducerStream(String.class)
+        .route()
+        .toExchange("node-complete")
+        .then()
+        .send(completedWorkflows)
+        .doOnNext(tx -> log.info("Completed: {}", tx.get()))
+        .subscribe(Transaction::commit);
   }
 }
