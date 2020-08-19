@@ -26,6 +26,7 @@ public class NodeController {
 
   /** Dependencies */
   private final Sender<String> sender;
+
   private final NodeService service;
 
   @Autowired

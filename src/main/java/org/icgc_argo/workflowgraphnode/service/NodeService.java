@@ -12,7 +12,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
-
 import lombok.NonNull;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -73,8 +72,9 @@ public class NodeService {
   }
 
   public Map<String, PipeStatus> getStatus() {
-    return this.pipelines.keySet().stream().map(disposable -> Map.entry(disposable, checkPipe(disposable)))
-      .collect(Collectors.toUnmodifiableMap(Entry::getKey, Entry::getValue));
+    return this.pipelines.keySet().stream()
+        .map(disposable -> Map.entry(disposable, checkPipe(disposable)))
+        .collect(Collectors.toUnmodifiableMap(Entry::getKey, Entry::getValue));
   }
 
   public void stopIngest() {
@@ -102,8 +102,9 @@ public class NodeService {
   }
 
   /**
-   * Starts a pipe with the given name and callable pipeline builder. Built pipe is stored as part of the service's
-   * state in the form of a synchronized hashmap.
+   * Starts a pipe with the given name and callable pipeline builder. Built pipe is stored as part
+   * of the service's state in the form of a synchronized hashmap.
+   *
    * @param name Name of the pipe
    * @param pipeBuilder Callable that will be invoked as a pipeline builder
    */
@@ -120,12 +121,14 @@ public class NodeService {
 
   /**
    * Check the status of the disposable pipe
+   *
    * @param name Name of the pipe
-   * @return Returns enabled if Disposable is still subscribed, otherwise returns disabled if has been disposed.
+   * @return Returns enabled if Disposable is still subscribed, otherwise returns disabled if has
+   *     been disposed.
    */
   private PipeStatus checkPipe(String name) {
     val pipe = this.pipelines.get(name);
-    if (pipe== null || pipe.isDisposed()) {
+    if (pipe == null || pipe.isDisposed()) {
       return PipeStatus.DISABLED;
     } else {
       return PipeStatus.ENABLED;
@@ -133,8 +136,9 @@ public class NodeService {
   }
 
   /**
-   * The job of this pipe is to take the incoming messages from the Node's HTTP ingest endpoint and to place them
-   * on the run queue.
+   * The job of this pipe is to take the incoming messages from the Node's HTTP ingest endpoint and
+   * to place them on the run queue.
+   *
    * @param runRequestSource The on demand source to send messages to.
    * @return Returns the pipe in the form of a Disposable from the subscribed flux.
    */
@@ -143,10 +147,9 @@ public class NodeService {
         .declareTopology(topologyConfig.queueTopology())
         .createTransactionalProducerStream(String.class)
         .route()
-        .toExchange("node-input")
+        .toExchange(topologyConfig.getProperties().getInput().getExchange())
         .then()
-        .send(runRequestSource.source()
-          .doOnNext(i -> log.info("Trying to send: {}", i.get())))
+        .send(runRequestSource.source().doOnNext(i -> log.info("Trying to send: {}", i.get())))
         .doOnError(throwable -> log.info(throwable.getLocalizedMessage()))
         .transform(ReactiveRabbit.commitElseTerminate())
         .doOnError(throwable -> log.info(throwable.getLocalizedMessage()))
@@ -154,34 +157,36 @@ public class NodeService {
   }
 
   /**
-   * This pipe takes the queued messages from the run queue, attempts to run them as new workflow runs, and then places
-   * the runId of the running workflow onto the running message queue.
+   * This pipe takes the queued messages from the run queue, attempts to run them as new workflow
+   * runs, and then places the runId of the running workflow onto the running message queue.
+   *
    * @return Returns the pipe in the form of a Disposable from the subscribed flux.
    */
   private Disposable queuedToRunning() {
     final Flux<Transaction<RunRequest>> incomingStream =
         rabbit
             .declareTopology(topologyConfig.queueTopology())
-            .createTransactionalConsumerStream("run-queue", String.class)
+            .createTransactionalConsumerStream(
+                topologyConfig.getProperties().getInput().getQueue(), String.class)
             .receive()
             .flatMap(
                 tx ->
-                    Mono.fromCallable(() ->
-                      tx.map(MAPPER.readValue(tx.get(), RunRequest.class))));
+                    Mono.fromCallable(() -> tx.map(MAPPER.readValue(tx.get(), RunRequest.class))));
 
     // TODO: Handle errors from the workflow API
     final Flux<Transaction<String>> launchedWorkflowStream =
         incomingStream
-          .doOnNext(item -> log.info("Attempting to run workflow with: {}", item.get()))
-          .flatMap(
-            tx ->
-                Mono.fromCallable(() -> tx.map(wesClient.launchWorkflowWithWes(tx.get()).block())));
+            .doOnNext(item -> log.info("Attempting to run workflow with: {}", item.get()))
+            .flatMap(
+                tx ->
+                    Mono.fromCallable(
+                        () -> tx.map(wesClient.launchWorkflowWithWes(tx.get()).block())));
 
     return rabbit
         .declareTopology(topologyConfig.runningTopology())
         .createTransactionalProducerStream(String.class)
         .route()
-        .toExchange("node-state")
+        .toExchange(topologyConfig.getProperties().getRunning().getExchange())
         .then()
         .send(launchedWorkflowStream)
         .subscribeOn(scheduler)
@@ -189,16 +194,18 @@ public class NodeService {
   }
 
   /**
-   * This pipe checks the running jobs on the running message queue by querying the rdpc gateway to see if they have
-   * completed or errored out. On complete they are sent to the complete exchange and the transaction is commited,
-   * otherwise the transaction is rejected.
+   * This pipe checks the running jobs on the running message queue by querying the rdpc gateway to
+   * see if they have completed or errored out. On complete they are sent to the complete exchange
+   * and the transaction is commited, otherwise the transaction is rejected.
+   *
    * @return
    */
   private Disposable runningToCompleteOrError() {
     final Flux<Transaction<String>> completedWorkflows =
         rabbit
             .declareTopology(topologyConfig.runningTopology())
-            .createTransactionalConsumerStream("running", String.class)
+            .createTransactionalConsumerStream(
+                topologyConfig.getProperties().getRunning().getQueue(), String.class)
             .receive()
             .delayElements(Duration.ofSeconds(10))
             .doOnNext(r -> log.info("Checking status of: {}", r.get()))
@@ -211,8 +218,10 @@ public class NodeService {
         .declareTopology(topologyConfig.completeTopology())
         .createTransactionalProducerStream(String.class)
         .route()
-        .toExchange("node-complete")
-        .and().whenNackByBroker().alwaysRetry(Duration.ofSeconds(5))
+        .toExchange(topologyConfig.getProperties().getComplete().getExchange())
+        .and()
+        .whenNackByBroker()
+        .alwaysRetry(Duration.ofSeconds(5))
         .then()
         .send(completedWorkflows)
         .doOnNext(tx -> log.info("Completed: {}", tx.get()))

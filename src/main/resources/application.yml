@@ -20,7 +20,7 @@ spring:
     name: wgn-dev
 
 pipes:
-  queue:
+  input:
     exchange: "ingest"
     queue: "queued"
   running:
