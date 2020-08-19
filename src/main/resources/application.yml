@@ -1,5 +1,4 @@
 
-
 rabbit:
   default-endpoint-name: standalone
   endpoints:
@@ -15,3 +14,18 @@ workflow:
   service:
     execution.url: http://localhost:9090/runs
     query.url: localhost:5000
+
+spring:
+  application:
+    name: wgn-dev
+
+pipes:
+  queue:
+    exchange: "ingest"
+    queue: "queued"
+  running:
+    exchange: "state"
+    queue: "running"
+  complete:
+    exchange: "complete"
+    queue: "default.complete"
