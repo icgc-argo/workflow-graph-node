@@ -5,13 +5,6 @@ import com.pivotal.rabbitmq.RabbitEndpointService;
 import com.pivotal.rabbitmq.ReactiveRabbit;
 import com.pivotal.rabbitmq.source.Source;
 import com.pivotal.rabbitmq.stream.Transaction;
-import java.time.Duration;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.concurrent.Callable;
-import java.util.stream.Collectors;
 import lombok.NonNull;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -28,6 +21,14 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
+
+import java.time.Duration;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.concurrent.Callable;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Configuration
@@ -179,8 +180,9 @@ public class NodeService {
             .doOnNext(item -> log.info("Attempting to run workflow with: {}", item.get()))
             .flatMap(
                 tx ->
-                    Mono.fromCallable(
-                        () -> tx.map(wesClient.launchWorkflowWithWes(tx.get()).block())));
+                    wesClient
+                        .launchWorkflowWithWes(tx.get())
+                        .flatMap(response -> Mono.fromCallable(() -> tx.map(response))));
 
     return rabbit
         .declareTopology(topologyConfig.runningTopology())
