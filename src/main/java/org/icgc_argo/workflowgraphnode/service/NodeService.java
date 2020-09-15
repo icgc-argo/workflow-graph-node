@@ -9,6 +9,7 @@ import lombok.NonNull;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import org.icgc_argo.workflowgraphnode.components.Node;
 import org.icgc_argo.workflowgraphnode.config.TopologyConfig;
 import org.icgc_argo.workflowgraphnode.model.PipeStatus;
 import org.icgc_argo.workflowgraphnode.model.RunRequest;
@@ -29,6 +30,9 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
+
+import static org.icgc_argo.workflowgraphnode.components.Node.sourceToSinkProcessor;
+import static org.icgc_argo.workflowgraphnode.components.Node.workflowParamsFunction;
 
 @Slf4j
 @Configuration
@@ -170,9 +174,17 @@ public class NodeService {
             .createTransactionalConsumerStream(
                 topologyConfig.getProperties().getInput().getQueue(), String.class)
             .receive()
-            .flatMap(
-                tx ->
-                    Mono.fromCallable(() -> tx.map(MAPPER.readValue(tx.get(), RunRequest.class))));
+            .map(workflowParamsFunction())
+            .<Transaction<RunRequest>>handle(
+                (tx, sink) -> {
+                  try {
+                    sink.next(tx.map(sourceToSinkProcessor().apply(tx.get())));
+                  } catch (Throwable e) {
+                    log.error(e.getLocalizedMessage());
+                    tx.reject();
+                  }
+                })
+            .doOnNext(tx -> log.info("Run request created: {}", tx.get()));
 
     // TODO: Handle errors from the workflow API
     final Flux<Transaction<String>> launchedWorkflowStream =
