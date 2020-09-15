@@ -1,0 +1,14 @@
+{
+  "input": {
+    "exchange": "ingest",
+    "queue": "queued"
+  },
+  "running": {
+    "exchange": "node-state",
+    "queue": "running"
+  },
+  "complete": {
+    "exchange": "complete",
+    "queue": "default.complete"
+  }
+}

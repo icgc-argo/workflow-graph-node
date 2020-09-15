@@ -1,4 +1,3 @@
-
 rabbit:
   default-endpoint-name: standalone
   endpoints:
@@ -19,13 +18,5 @@ spring:
   application:
     name: wgn-dev
 
-pipes:
-  input:
-    exchange: "ingest"
-    queue: "queued"
-  running:
-    exchange: "state"
-    queue: "running"
-  complete:
-    exchange: "complete"
-    queue: "default.complete"
+node:
+  jsonConfigPath: example-node-config.json
