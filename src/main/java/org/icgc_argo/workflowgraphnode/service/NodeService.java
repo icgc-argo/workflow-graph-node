@@ -9,7 +9,7 @@ import lombok.NonNull;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
-import org.icgc_argo.workflowgraphnode.components.Node;
+import org.icgc_argo.workflowgraphnode.config.AppConfig;
 import org.icgc_argo.workflowgraphnode.config.TopologyConfig;
 import org.icgc_argo.workflowgraphnode.model.PipeStatus;
 import org.icgc_argo.workflowgraphnode.model.RunRequest;
@@ -57,6 +57,7 @@ public class NodeService {
   private final WesClient wesClient;
   private final TopologyConfig topologyConfig;
   private final Source<String> runRequestSource;
+  private final AppConfig appConfig;
 
   @Autowired
   public NodeService(
@@ -64,12 +65,14 @@ public class NodeService {
       @NonNull RdpcClient rdpcClient,
       @NonNull WesClient wesClient,
       @NonNull TopologyConfig topologyConfig,
-      @NonNull Source<String> runRequestSource) {
+      @NonNull Source<String> runRequestSource,
+      @NonNull AppConfig appConfig) {
     this.rabbit = rabbit;
     this.rdpcClient = rdpcClient;
     this.wesClient = wesClient;
     this.topologyConfig = topologyConfig;
     this.runRequestSource = runRequestSource;
+    this.appConfig = appConfig;
 
     startIngest();
     startQueued();
@@ -152,7 +155,7 @@ public class NodeService {
         .declareTopology(topologyConfig.queueTopology())
         .createTransactionalProducerStream(String.class)
         .route()
-        .toExchange(topologyConfig.getProperties().getInput().getExchange())
+        .toExchange(appConfig.getNodeProperties().getInput().getExchange())
         .then()
         .send(runRequestSource.source().doOnNext(i -> log.info("Trying to send: {}", i.get())))
         .doOnError(throwable -> log.info(throwable.getLocalizedMessage()))
@@ -172,13 +175,15 @@ public class NodeService {
         rabbit
             .declareTopology(topologyConfig.queueTopology())
             .createTransactionalConsumerStream(
-                topologyConfig.getProperties().getInput().getQueue(), String.class)
+                appConfig.getNodeProperties().getInput().getQueue(), String.class)
             .receive()
             .map(workflowParamsFunction())
             .<Transaction<RunRequest>>handle(
                 (tx, sink) -> {
                   try {
-                    sink.next(tx.map(sourceToSinkProcessor().apply(tx.get())));
+                    sink.next(
+                        tx.map(
+                            sourceToSinkProcessor(appConfig.getNodeProperties()).apply(tx.get())));
                   } catch (Throwable e) {
                     log.error(e.getLocalizedMessage());
                     tx.reject();
@@ -200,7 +205,7 @@ public class NodeService {
         .declareTopology(topologyConfig.runningTopology())
         .createTransactionalProducerStream(String.class)
         .route()
-        .toExchange(topologyConfig.getProperties().getRunning().getExchange())
+        .toExchange(appConfig.getNodeProperties().getRunning().getExchange())
         .then()
         .send(launchedWorkflowStream)
         .subscribeOn(scheduler)
@@ -219,7 +224,7 @@ public class NodeService {
         rabbit
             .declareTopology(topologyConfig.runningTopology())
             .createTransactionalConsumerStream(
-                topologyConfig.getProperties().getRunning().getQueue(), String.class)
+                appConfig.getNodeProperties().getRunning().getQueue(), String.class)
             .receive()
             .delayElements(Duration.ofSeconds(10))
             .doOnNext(r -> log.info("Checking status of: {}", r.get()))
@@ -232,7 +237,7 @@ public class NodeService {
         .declareTopology(topologyConfig.completeTopology())
         .createTransactionalProducerStream(String.class)
         .route()
-        .toExchange(topologyConfig.getProperties().getComplete().getExchange())
+        .toExchange(appConfig.getNodeProperties().getComplete().getExchange())
         .and()
         .whenNackByBroker()
         .alwaysRetry(Duration.ofSeconds(5))

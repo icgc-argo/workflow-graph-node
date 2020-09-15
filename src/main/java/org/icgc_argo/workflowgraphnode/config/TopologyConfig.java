@@ -1,29 +1,24 @@
 package org.icgc_argo.workflowgraphnode.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pivotal.rabbitmq.source.OnDemandSource;
 import com.pivotal.rabbitmq.source.Sender;
 import com.pivotal.rabbitmq.topology.ExchangeType;
 import com.pivotal.rabbitmq.topology.TopologyBuilder;
-import java.io.FileInputStream;
-import java.util.function.Consumer;
-import lombok.Getter;
-import lombok.SneakyThrows;
-import lombok.val;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 
+import java.util.function.Consumer;
+
 @Configuration
 public class TopologyConfig {
 
-  @Getter private final PipesProperties properties;
+  private final AppConfig appConfig;
 
-  @SneakyThrows
-  public TopologyConfig(@Value("${node.jsonConfigPath}") String location) {
-    val inputStream = new FileInputStream(location);
-    this.properties = new ObjectMapper().readValue(inputStream, PipesProperties.class);
+  @Autowired
+  public TopologyConfig(AppConfig appConfig) {
+    this.appConfig = appConfig;
   }
 
   @Bean
@@ -40,30 +35,30 @@ public class TopologyConfig {
   public Consumer<TopologyBuilder> queueTopology() {
     return topologyBuilder ->
         topologyBuilder
-            .declareExchange(properties.getInput().getExchange())
+            .declareExchange(appConfig.getNodeProperties().getInput().getExchange())
             .type(ExchangeType.direct)
             .and()
-            .declareQueue(properties.getInput().getQueue())
-            .boundTo(properties.getInput().getExchange());
+            .declareQueue(appConfig.getNodeProperties().getInput().getQueue())
+            .boundTo(appConfig.getNodeProperties().getInput().getExchange());
   }
 
   public Consumer<TopologyBuilder> runningTopology() {
     return topologyBuilder ->
         topologyBuilder
-            .declareExchange(properties.getRunning().getExchange())
+            .declareExchange(appConfig.getNodeProperties().getRunning().getExchange())
             .type(ExchangeType.direct)
             .and()
-            .declareQueue(properties.getRunning().getQueue())
-            .boundTo(properties.getRunning().getExchange());
+            .declareQueue(appConfig.getNodeProperties().getRunning().getQueue())
+            .boundTo(appConfig.getNodeProperties().getRunning().getExchange());
   }
 
   public Consumer<TopologyBuilder> completeTopology() {
     return topologyBuilder ->
         topologyBuilder
-            .declareExchange(properties.getComplete().getExchange())
+            .declareExchange(appConfig.getNodeProperties().getComplete().getExchange())
             .type(ExchangeType.topic)
             .and()
-            .declareQueue(properties.getComplete().getQueue())
-            .boundTo(properties.getComplete().getExchange());
+            .declareQueue(appConfig.getNodeProperties().getComplete().getQueue())
+            .boundTo(appConfig.getNodeProperties().getComplete().getExchange());
   }
 }

@@ -8,10 +8,8 @@ rabbit:
 
 logging.level.root: INFO
 
-workflow:
-  service:
-    execution.url: http://localhost:9090/runs
-    query.url: localhost:5000
+wes:
+  url: http://localhost:9090/runs
 
 spring:
   application:
