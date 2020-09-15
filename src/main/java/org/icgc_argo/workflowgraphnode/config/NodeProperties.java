@@ -1,14 +1,15 @@
 package org.icgc_argo.workflowgraphnode.config;
 
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 import org.icgc_argo.workflow_graph_lib.polyglot.enums.GraphFunctionLanguage;
 
 @Data
 public class NodeProperties {
 
-  private GraphFunctionLanguage graphFunctionLanguage;
-  private InputPipeProperties input;
+  private WorkflowProperties workflow;
+  private String workflowParamsFunction;
+  private GraphFunctionLanguage workflowParamsFunctionLanguage;
+  private PipeProperties input;
   private PipeProperties running;
   private PipeProperties complete;
 
@@ -19,10 +20,8 @@ public class NodeProperties {
   }
 
   @Data
-  @EqualsAndHashCode(callSuper = true)
-  public static class InputPipeProperties extends PipeProperties {
+  public static class WorkflowProperties {
     private String workflowUrl;
     private String workflowVersion;
-    private String workflowParamsFunction;
   }
 }

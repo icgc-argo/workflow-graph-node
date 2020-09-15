@@ -177,7 +177,7 @@ public class NodeService {
             .createTransactionalConsumerStream(
                 appConfig.getNodeProperties().getInput().getQueue(), String.class)
             .receive()
-            .map(workflowParamsFunction())
+            .map(workflowParamsFunction(appConfig.getNodeProperties()))
             .<Transaction<RunRequest>>handle(
                 (tx, sink) -> {
                   try {

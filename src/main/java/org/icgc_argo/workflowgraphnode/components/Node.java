@@ -15,14 +15,12 @@ import static org.icgc_argo.workflow_graph_lib.polyglot.Polyglot.runMainFunction
 
 public class Node {
 
-  public static Function<Transaction<String>, Transaction<Value>> workflowParamsFunction() {
+  public static Function<Transaction<String>, Transaction<Value>> workflowParamsFunction(NodeProperties nodeProperties) {
     return tx ->
         tx.map(
             runMainFunctionWithData(
-                GraphFunctionLanguage
-                    .JS, // TODO: nodeProperties.getNodeFunctionLanguage() once done by Dusan
-                "return data;", // TODO: nodeProperties.getWorkflowParamsFunction() once done by
-                // Dusan
+                nodeProperties.getWorkflowParamsFunctionLanguage(),
+                nodeProperties.getWorkflowParamsFunction(),
                 tx.get()));
   }
 
@@ -30,9 +28,12 @@ public class Node {
     return workflowParamsResponse -> {
       try {
         return RunRequest.builder()
-            .workflowUrl(nodeProperties.getInput().getWorkflowUrl())
+            .workflowUrl(nodeProperties.getWorkflow().getWorkflowUrl())
             .workflowParams(workflowParamsResponse.as(Map.class))
-            .workflowEngineParams(WorkflowEngineParams.builder().revision(nodeProperties.getInput().getWorkflowVersion()).build())
+            .workflowEngineParams(
+                WorkflowEngineParams.builder()
+                    .revision(nodeProperties.getWorkflow().getWorkflowVersion())
+                    .build())
             .build();
       } catch (Throwable e) {
         throw new WorkflowParamsFunctionException(e.getLocalizedMessage());
