@@ -5,7 +5,6 @@ import com.pivotal.rabbitmq.source.OnDemandSource;
 import com.pivotal.rabbitmq.source.Sender;
 import com.pivotal.rabbitmq.topology.ExchangeType;
 import com.pivotal.rabbitmq.topology.TopologyBuilder;
-
 import java.io.FileInputStream;
 import java.util.function.Consumer;
 import lombok.Getter;
@@ -18,7 +17,6 @@ import org.springframework.context.annotation.Primary;
 
 @Configuration
 public class TopologyConfig {
-
 
   @Getter private final PipesProperties properties;
 
