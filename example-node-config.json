@@ -1,4 +1,10 @@
 {
+  "workflow": {
+    "workflowUrl": "icgc-argo/nextflow-data-processing-utility-tools",
+    "workflowVersion": "2.2.0"
+  },
+  "functionLanguage": "js",
+  "workflowParamsFunction": "return data;",
   "input": {
     "exchange": "ingest",
     "queue": "queued"

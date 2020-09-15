@@ -2,7 +2,6 @@ package org.icgc_argo.workflowgraphnode.components;
 
 import com.pivotal.rabbitmq.stream.Transaction;
 import org.graalvm.polyglot.Value;
-import org.icgc_argo.workflow_graph_lib.polyglot.enums.GraphFunctionLanguage;
 import org.icgc_argo.workflowgraphnode.components.exceptions.WorkflowParamsFunctionException;
 import org.icgc_argo.workflowgraphnode.config.NodeProperties;
 import org.icgc_argo.workflowgraphnode.model.RunRequest;
@@ -15,11 +14,12 @@ import static org.icgc_argo.workflow_graph_lib.polyglot.Polyglot.runMainFunction
 
 public class Node {
 
-  public static Function<Transaction<String>, Transaction<Value>> workflowParamsFunction(NodeProperties nodeProperties) {
+  public static Function<Transaction<String>, Transaction<Value>> workflowParamsFunction(
+      NodeProperties nodeProperties) {
     return tx ->
         tx.map(
             runMainFunctionWithData(
-                nodeProperties.getWorkflowParamsFunctionLanguage(),
+                nodeProperties.getFunctionLanguage(),
                 nodeProperties.getWorkflowParamsFunction(),
                 tx.get()));
   }

@@ -7,8 +7,8 @@ import org.icgc_argo.workflow_graph_lib.polyglot.enums.GraphFunctionLanguage;
 public class NodeProperties {
 
   private WorkflowProperties workflow;
+  private GraphFunctionLanguage functionLanguage;
   private String workflowParamsFunction;
-  private GraphFunctionLanguage workflowParamsFunctionLanguage;
   private PipeProperties input;
   private PipeProperties running;
   private PipeProperties complete;
