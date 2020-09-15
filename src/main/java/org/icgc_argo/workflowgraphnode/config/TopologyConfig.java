@@ -1,13 +1,17 @@
 package org.icgc_argo.workflowgraphnode.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pivotal.rabbitmq.source.OnDemandSource;
 import com.pivotal.rabbitmq.source.Sender;
 import com.pivotal.rabbitmq.topology.ExchangeType;
 import com.pivotal.rabbitmq.topology.TopologyBuilder;
+
+import java.io.FileInputStream;
 import java.util.function.Consumer;
 import lombok.Getter;
-import lombok.NonNull;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.SneakyThrows;
+import lombok.val;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -15,11 +19,13 @@ import org.springframework.context.annotation.Primary;
 @Configuration
 public class TopologyConfig {
 
+
   @Getter private final PipesProperties properties;
 
-  @Autowired
-  public TopologyConfig(@NonNull PipesProperties properties) {
-    this.properties = properties;
+  @SneakyThrows
+  public TopologyConfig(@Value("${node.jsonConfigPath}") String location) {
+    val inputStream = new FileInputStream(location);
+    this.properties = new ObjectMapper().readValue(inputStream, PipesProperties.class);
   }
 
   @Bean

@@ -1,0 +1,8 @@
+{
+  "properties": [
+    {
+      "name": "node.jsonConfigPath",
+      "type": "java.lang.String",
+      "description": "File location for node config."
+    }
+  ] }
