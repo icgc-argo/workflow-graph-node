@@ -9,7 +9,6 @@ rabbit:
 logging.level.root: INFO
 
 workflow:
-  url: https://github.com/andricDu/nf-echo-params.git
   service:
     execution.url: http://localhost:9090/runs
     query.url: localhost:5000
