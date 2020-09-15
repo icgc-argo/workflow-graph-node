@@ -1,13 +1,14 @@
 package org.icgc_argo.workflowgraphnode.workflow;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import java.nio.file.Files;
-import java.util.Map;
 import lombok.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
+
+import java.nio.file.Files;
+import java.util.Map;
 
 @Component
 public class RdpcClient {
