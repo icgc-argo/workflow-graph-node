@@ -30,7 +30,7 @@ public class Node {
         return RunRequest.builder()
             .workflowUrl(nodeProperties.getWorkflow().getWorkflowUrl())
             .workflowParams(workflowParamsResponse.as(Map.class))
-            .workflowEngineParams(
+            .workflowEngineParams( // TODO: going to require more engine params ...
                 WorkflowEngineParams.builder()
                     .revision(nodeProperties.getWorkflow().getWorkflowVersion())
                     .build())

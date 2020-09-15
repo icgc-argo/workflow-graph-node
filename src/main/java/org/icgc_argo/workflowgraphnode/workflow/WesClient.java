@@ -29,6 +29,7 @@ public class WesClient {
    * @return Returns a Mono wrapped runId of the successfully launched workflow
    */
   public Mono<String> launchWorkflowWithWes(RunRequest runRequest) {
+    // TODO: refactor to use GQL mutation (wes url should be GQL endpoint)
     return WebClient.create()
         .post()
         .uri(appConfig.getWesUrl())
