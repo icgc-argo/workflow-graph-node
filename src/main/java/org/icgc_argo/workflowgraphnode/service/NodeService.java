@@ -1,6 +1,5 @@
 package org.icgc_argo.workflowgraphnode.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pivotal.rabbitmq.RabbitEndpointService;
 import com.pivotal.rabbitmq.ReactiveRabbit;
 import com.pivotal.rabbitmq.source.Source;
@@ -20,8 +19,6 @@ import org.springframework.context.annotation.Configuration;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Scheduler;
-import reactor.core.scheduler.Schedulers;
 
 import java.time.Duration;
 import java.util.Collections;
@@ -38,15 +35,9 @@ import static org.icgc_argo.workflowgraphnode.components.Node.workflowParamsFunc
 @Configuration
 public class NodeService {
 
-  /** Constants */
-  private static final ObjectMapper MAPPER = new ObjectMapper();
-
   private static final String INGEST = "httpIngest";
   private static final String QUEUED_TO_RUNNING = "queuedToRunning";
   private static final String RUNNING_TO_COMPLETE = "runningToComplete";
-
-  /** State */
-  private final Scheduler scheduler = Schedulers.newElastic("wes-scheduler");
 
   private final Map<String, Disposable> pipelines = Collections.synchronizedMap(new HashMap<>());
 
@@ -158,7 +149,10 @@ public class NodeService {
         .toExchange(appConfig.getNodeProperties().getInput().getExchange())
         .then()
         .send(runRequestSource.source().doOnNext(i -> log.info("Trying to send: {}", i.get())))
-        .doOnError(throwable -> log.info(throwable.getLocalizedMessage()))
+        .doOnError(
+            throwable ->
+                log.info(
+                    throwable.getLocalizedMessage())) // TODO: reject messages on error as well?
         .transform(ReactiveRabbit.commitElseTerminate())
         .doOnError(throwable -> log.info(throwable.getLocalizedMessage()))
         .subscribe();
@@ -178,6 +172,7 @@ public class NodeService {
                 appConfig.getNodeProperties().getInput().getQueue(), String.class)
             .receive()
             .map(workflowParamsFunction(appConfig.getNodeProperties()))
+            .doOnNext(tx -> log.info("WorkflowParamsFunction result: {}", tx.get()))
             .<Transaction<RunRequest>>handle(
                 (tx, sink) -> {
                   try {
@@ -208,7 +203,6 @@ public class NodeService {
         .toExchange(appConfig.getNodeProperties().getRunning().getExchange())
         .then()
         .send(launchedWorkflowStream)
-        .subscribeOn(scheduler)
         .subscribe(Transaction::commit);
   }
 
