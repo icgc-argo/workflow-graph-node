@@ -1,5 +1,6 @@
 package org.icgc_argo.workflowgraphnode.workflow;
 
+import lombok.extern.slf4j.Slf4j;
 import org.icgc_argo.workflowgraphnode.config.AppConfig;
 import org.icgc_argo.workflowgraphnode.model.RunRequest;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +13,7 @@ import reactor.core.publisher.Mono;
 import java.util.Map;
 
 @Component
+@Slf4j
 public class WesClient {
 
   /** Dependencies */
@@ -36,7 +38,19 @@ public class WesClient {
         .contentType(MediaType.APPLICATION_JSON)
         .body(BodyInserters.fromValue(runRequest))
         .retrieve()
-        .bodyToMono(Map.class)
+        .bodyToMono(
+            Map
+                .class) // TODO: Errors seem to result in ...
+                        // "com.fasterxml.jackson.databind.JsonMappingException: Multi threaded
+                        // access requested by thread Thread[reactor-http-nio-3,5,main] but is not
+                        // allowed for language(s) js. (through reference chain:
+                        // org.icgc_argo.workflowgraphnode.model.RunRequest["workflow_params"])"
+                        // ??????
+        .onErrorResume(
+            e -> {
+              log.error("Unexpected response: {}", e.getLocalizedMessage());
+              return Mono.empty();
+            })
         .map(map -> map.get("run_id").toString());
   }
 }

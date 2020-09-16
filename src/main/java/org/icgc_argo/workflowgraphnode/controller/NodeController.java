@@ -37,7 +37,7 @@ public class NodeController {
   }
 
   @PostMapping("/enqueue")
-  public Mono<ResponseEntity<String>> enqueueBatch(@RequestBody Mono<IncomingEvent> job) {
+  public Mono<ResponseEntity<String>> enqueueBatch(@RequestBody Mono<Map<String, Object>> job) {
     return job.flatMap(runRequest -> Mono.fromCallable(() -> MAPPER.writeValueAsString(runRequest)))
         .flatMap(sender::send)
         .map(ResponseEntity::ok);
