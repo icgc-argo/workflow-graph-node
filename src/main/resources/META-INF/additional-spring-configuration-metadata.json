@@ -6,18 +6,9 @@
       "description": "File location for node config."
     },
     {
-      "name": "workflow.service.execution.url",
+      "name": "wes.url",
       "type": "java.lang.String",
-      "description": "Root URL for WES submission."
-    },
-    {
-      "name": "workflow.service.query.url",
-      "type": "java.lang.String",
-      "description": "Root URL for RDPC GraphQL query API."
-    },
-    {
-      "name": "workflow.url",
-      "type": "java.lang.String",
-      "description": "URL of Workflow to Run."
+      "description": "Root URL for RDPC GraphQL API."
     }
-  ] }
+  ]
+}

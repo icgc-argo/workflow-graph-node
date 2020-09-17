@@ -16,6 +16,9 @@
 
     <properties>
         <java.version>11</java.version>
+        <graalvm-sdk.version>20.1.0</graalvm-sdk.version>
+        <reactor-rabbitmq-streams.version>0.0.6</reactor-rabbitmq-streams.version>
+        <workflow-graph-lib.version>1.0.0-SNAPSHOT</workflow-graph-lib.version>
     </properties>
 
     <dependencies>
@@ -37,10 +40,22 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- Reactor RabbitMQ -->
+        <!-- CORE -->
         <dependency>
             <groupId>com.pivotal.rabbitmq</groupId>
             <artifactId>reactor-rabbitmq-streams-autoconfigure</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.graalvm.sdk</groupId>
+            <artifactId>graal-sdk</artifactId>
+            <version>${graalvm-sdk.version}</version>
+        </dependency>
+
+        <!-- LIB -->
+        <dependency>
+            <groupId>org.icgc_argo</groupId>
+            <artifactId>workflow-graph-lib</artifactId>
+            <version>${workflow-graph-lib.version}</version>
         </dependency>
 
         <!-- Testing -->
@@ -74,7 +89,7 @@
             <dependency>
                 <groupId>com.pivotal.rabbitmq</groupId>
                 <artifactId>reactor-rabbitmq-streams</artifactId>
-                <version>0.0.5</version>
+                <version>${reactor-rabbitmq-streams.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>

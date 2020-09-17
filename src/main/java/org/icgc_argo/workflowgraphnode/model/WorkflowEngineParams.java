@@ -3,19 +3,20 @@ package org.icgc_argo.workflowgraphnode.model;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
-
-import java.util.Map;
+import lombok.NoArgsConstructor;
 
 @Data
 @Builder
-@JsonIgnoreProperties(ignoreUnknown = true)
+@AllArgsConstructor
+@NoArgsConstructor
 @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy.class)
-public class RunRequest {
-  private String workflowUrl;
-
-  private Map<String, Object> workflowParams;
-
-  private WorkflowEngineParams workflowEngineParams;
+@JsonIgnoreProperties(ignoreUnknown = true)
+public class WorkflowEngineParams {
+    private String revision;
+    private String launchDir;
+    private String projectDir;
+    private String workDir;
 }
