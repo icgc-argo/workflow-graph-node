@@ -2,24 +2,17 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
+
     <parent>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-parent</artifactId>
-        <version>2.2.4.RELEASE</version>
-        <relativePath/> <!-- lookup parent from repository -->
+        <groupId>org.icgc_argo</groupId>
+        <artifactId>workflow-graph-parent-pom</artifactId>
+        <version>1.0.0</version>
     </parent>
-    <groupId>org.icgc_argo</groupId>
+
     <artifactId>workflow-graph-node</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>workflow-graph-node</name>
-    <description>Demo project for Spring Boot</description>
-
-    <properties>
-        <java.version>11</java.version>
-        <graalvm-sdk.version>20.1.0</graalvm-sdk.version>
-        <reactor-rabbitmq-streams.version>0.0.6</reactor-rabbitmq-streams.version>
-        <workflow-graph-lib.version>1.0.0-SNAPSHOT</workflow-graph-lib.version>
-    </properties>
+    <description>Workflow Graph Node</description>
 
     <dependencies>
 
@@ -48,14 +41,12 @@
         <dependency>
             <groupId>org.graalvm.sdk</groupId>
             <artifactId>graal-sdk</artifactId>
-            <version>${graalvm-sdk.version}</version>
         </dependency>
 
         <!-- LIB -->
         <dependency>
             <groupId>org.icgc_argo</groupId>
             <artifactId>workflow-graph-lib</artifactId>
-            <version>${workflow-graph-lib.version}</version>
         </dependency>
 
         <!-- Testing -->
@@ -80,42 +71,8 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <optional>true</optional>
         </dependency>
     </dependencies>
-
-    <dependencyManagement>
-        <dependencies>
-            <dependency>
-                <groupId>com.pivotal.rabbitmq</groupId>
-                <artifactId>reactor-rabbitmq-streams</artifactId>
-                <version>${reactor-rabbitmq-streams.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
-
-    <repositories>
-        <repository>
-            <id>rabbitmq-maven-milestones</id>
-            <url>https://packagecloud.io/rabbitmq/maven-milestones/maven2</url>
-            <releases>
-                <enabled>true</enabled>
-            </releases>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-        </repository>
-        <repository>
-            <id>spring-milestones</id>
-            <name>Spring Milestones</name>
-            <url>https://repo.spring.io/milestone</url>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-        </repository>
-    </repositories>
 
     <build>
         <plugins>
@@ -123,19 +80,14 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
-            <plugin>
-                <groupId>com.coveo</groupId>
-                <artifactId>fmt-maven-plugin</artifactId>
-                <version>2.9</version>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>format</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
         </plugins>
     </build>
 
+    <repositories>
+        <repository>
+            <id>dcc-release</id>
+            <name>artifacts.oicr.on.ca-releases</name>
+            <url>https://artifacts.oicr.on.ca/artifactory/dcc-release</url>
+        </repository>
+    </repositories>
 </project>
