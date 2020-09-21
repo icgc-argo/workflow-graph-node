@@ -8,8 +8,8 @@ rabbit:
 
 logging.level.root: INFO
 
-wes:
-  url: http://localhost:9090/runs
+rdpc:
+  url: https://api.rdpc-dev.cancercollaboratory.org/graphql
 
 spring:
   application:

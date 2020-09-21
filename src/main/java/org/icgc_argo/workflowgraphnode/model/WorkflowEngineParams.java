@@ -15,8 +15,8 @@ import lombok.NoArgsConstructor;
 @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy.class)
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class WorkflowEngineParams {
-    private String revision;
-    private String launchDir;
-    private String projectDir;
-    private String workDir;
+  private String revision;
+  private String launchDir;
+  private String projectDir;
+  private String workDir;
 }

@@ -1,9 +1,19 @@
 package org.icgc_argo.workflowgraphnode.service;
 
+import static org.icgc_argo.workflowgraphnode.components.Node.sourceToSinkProcessor;
+import static org.icgc_argo.workflowgraphnode.components.Node.workflowParamsFunction;
+
 import com.pivotal.rabbitmq.RabbitEndpointService;
 import com.pivotal.rabbitmq.ReactiveRabbit;
 import com.pivotal.rabbitmq.source.Source;
 import com.pivotal.rabbitmq.stream.Transaction;
+import java.time.Duration;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.concurrent.Callable;
+import java.util.stream.Collectors;
 import lombok.NonNull;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -13,23 +23,11 @@ import org.icgc_argo.workflowgraphnode.config.TopologyConfig;
 import org.icgc_argo.workflowgraphnode.model.PipeStatus;
 import org.icgc_argo.workflowgraphnode.model.RunRequest;
 import org.icgc_argo.workflowgraphnode.workflow.RdpcClient;
-import org.icgc_argo.workflowgraphnode.workflow.WesClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-
-import java.time.Duration;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.concurrent.Callable;
-import java.util.stream.Collectors;
-
-import static org.icgc_argo.workflowgraphnode.components.Node.sourceToSinkProcessor;
-import static org.icgc_argo.workflowgraphnode.components.Node.workflowParamsFunction;
 
 @Slf4j
 @Configuration
@@ -45,7 +43,6 @@ public class NodeService {
   private final RabbitEndpointService rabbit;
 
   private final RdpcClient rdpcClient;
-  private final WesClient wesClient;
   private final TopologyConfig topologyConfig;
   private final Source<String> runRequestSource;
   private final AppConfig appConfig;
@@ -54,13 +51,11 @@ public class NodeService {
   public NodeService(
       @NonNull RabbitEndpointService rabbit,
       @NonNull RdpcClient rdpcClient,
-      @NonNull WesClient wesClient,
       @NonNull TopologyConfig topologyConfig,
       @NonNull Source<String> runRequestSource,
       @NonNull AppConfig appConfig) {
     this.rabbit = rabbit;
     this.rdpcClient = rdpcClient;
-    this.wesClient = wesClient;
     this.topologyConfig = topologyConfig;
     this.runRequestSource = runRequestSource;
     this.appConfig = appConfig;
@@ -192,8 +187,8 @@ public class NodeService {
             .doOnNext(item -> log.info("Attempting to run workflow with: {}", item.get()))
             .flatMap(
                 tx ->
-                    wesClient
-                        .launchWorkflowWithWes(tx.get())
+                    rdpcClient
+                        .startRun(tx.get())
                         .flatMap(response -> Mono.fromCallable(() -> tx.map(response))));
 
     return rabbit
@@ -222,7 +217,15 @@ public class NodeService {
             .receive()
             .delayElements(Duration.ofSeconds(10))
             .doOnNext(r -> log.info("Checking status of: {}", r.get()))
-            .filterWhen(tx -> rdpcClient.getWorkflowStatus(tx.get()).map("COMPLETE"::equals))
+            .filterWhen(
+                tx ->
+                    rdpcClient
+                        .getWorkflowStatus(tx.get())
+                        .map(
+                            s -> {
+                              log.info("Status for {}: {}", tx.get(), s);
+                              return "COMPLETE".equals(s);
+                            }))
             .doOnDiscard(Transaction.class, tx -> tx.rollback(true));
 
     // TODO: Handle executor error events, will probably require a dlq

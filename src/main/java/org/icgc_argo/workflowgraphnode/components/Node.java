@@ -1,16 +1,15 @@
 package org.icgc_argo.workflowgraphnode.components;
 
+import static org.icgc_argo.workflow_graph_lib.polyglot.Polyglot.runMainFunctionWithData;
+
 import com.pivotal.rabbitmq.stream.Transaction;
+import java.util.Map;
+import java.util.function.Function;
 import org.graalvm.polyglot.Value;
 import org.icgc_argo.workflowgraphnode.components.exceptions.WorkflowParamsFunctionException;
 import org.icgc_argo.workflowgraphnode.config.NodeProperties;
 import org.icgc_argo.workflowgraphnode.model.RunRequest;
 import org.icgc_argo.workflowgraphnode.model.WorkflowEngineParams;
-
-import java.util.Map;
-import java.util.function.Function;
-
-import static org.icgc_argo.workflow_graph_lib.polyglot.Polyglot.runMainFunctionWithData;
 
 public class Node {
 
