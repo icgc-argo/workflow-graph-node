@@ -9,7 +9,7 @@ rabbit:
 logging.level.root: INFO
 
 rdpc:
-  url: https://api.rdpc-dev.cancercollaboratory.org/graphql
+  url: http://localhost:4000/graphql
 
 spring:
   application:
