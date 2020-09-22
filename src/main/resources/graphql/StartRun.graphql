@@ -1,0 +1,12 @@
+mutation StartRun(
+    $workflowUrl:String!,
+    $workflowParams:JSON!,
+    $workflowEngineParams: WorkflowEngineParams) {
+    startRun(request: {
+        workflowUrl: $workflowUrl,
+        workflowParams: $workflowParams,
+        workflowEngineParams: $workflowEngineParams
+    }) {
+        runId
+    }
+}

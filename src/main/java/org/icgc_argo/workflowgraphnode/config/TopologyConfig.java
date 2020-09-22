@@ -4,12 +4,11 @@ import com.pivotal.rabbitmq.source.OnDemandSource;
 import com.pivotal.rabbitmq.source.Sender;
 import com.pivotal.rabbitmq.topology.ExchangeType;
 import com.pivotal.rabbitmq.topology.TopologyBuilder;
+import java.util.function.Consumer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
-
-import java.util.function.Consumer;
 
 @Configuration
 public class TopologyConfig {

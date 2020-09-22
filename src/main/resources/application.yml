@@ -8,8 +8,8 @@ rabbit:
 
 logging.level.root: INFO
 
-wes:
-  url: http://localhost:9090/runs
+rdpc:
+  url: http://localhost:4000/graphql
 
 spring:
   application:
