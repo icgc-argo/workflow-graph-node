@@ -10,6 +10,7 @@ import org.icgc_argo.workflowgraphnode.model.RunRequest;
 import org.icgc_argo.workflowgraphnode.model.WorkflowEngineParams;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
+import reactor.core.publisher.Mono;
 
 import java.util.Map;
 import java.util.function.Function;
@@ -29,21 +30,21 @@ public class Node {
     this.nodeProperties = appConfig.getNodeProperties();
   }
 
-  //  public Function<Transaction<GenericData.Record>, Mono<Transaction<Map<String, Object>>>>
-  //  gqlQuery() {
-  //    // we have, and want to keep the original transaction <Transaction<GenericData.Record>>,
-  //    // but we want to map it's value to the GQL response, and return the transaction wrapped
-  //    // in a Mono for the outer flatMap to resolve Mono<Transaction<Map<String, Object>>>
-  //    return tx ->
-  //        graphQL
-  //            .query(edgeProperties.getGqlQueryString(), tx.get())
-  //            // this flatMap also needs a function that returns a publisher (mono),
-  //            // which gets passed up all the way to the edge config flatMap
-  //            // preserving our original transaction and async subscribing to the
-  //            // result of the GQL Query which get mapped onto the transaction
-  //            // hence the return type Transaction<Map<String, Object>>>
-  //            .flatMap(gqlResponse -> Mono.fromCallable(() -> tx.map(gqlResponse)));
-  //  }
+  public Function<Transaction<GenericData.Record>, Mono<Transaction<Map<String, Object>>>>
+      gqlQuery() {
+    // we have, and want to keep the original transaction <Transaction<GenericData.Record>>,
+    // but we want to map it's value to the GQL response, and return the transaction wrapped
+    // in a Mono for the outer flatMap to resolve Mono<Transaction<Map<String, Object>>>
+    return tx ->
+        graphQL
+            .query(edgeProperties.getGqlQueryString(), tx.get())
+            // this flatMap also needs a function that returns a publisher (mono),
+            // which gets passed up all the way to the edge config flatMap
+            // preserving our original transaction and async subscribing to the
+            // result of the GQL Query which get mapped onto the transaction
+            // hence the return type Transaction<Map<String, Object>>>
+            .flatMap(gqlResponse -> Mono.fromCallable(() -> tx.map(gqlResponse)));
+  }
 
   public Predicate<Transaction<GenericData.Record>> filter() {
     return tx ->
