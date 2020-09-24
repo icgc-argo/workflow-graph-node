@@ -1,19 +1,9 @@
 package org.icgc_argo.workflowgraphnode.service;
 
-import static org.icgc_argo.workflowgraphnode.components.Node.sourceToSinkProcessor;
-import static org.icgc_argo.workflowgraphnode.components.Node.workflowParamsFunction;
-
 import com.pivotal.rabbitmq.RabbitEndpointService;
 import com.pivotal.rabbitmq.ReactiveRabbit;
 import com.pivotal.rabbitmq.source.Source;
 import com.pivotal.rabbitmq.stream.Transaction;
-import java.time.Duration;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.concurrent.Callable;
-import java.util.stream.Collectors;
 import lombok.NonNull;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -28,6 +18,17 @@ import org.springframework.context.annotation.Configuration;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+
+import java.time.Duration;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.concurrent.Callable;
+import java.util.stream.Collectors;
+
+import static org.icgc_argo.workflow_graph_lib.utils.JacksonUtils.toMap;
+import static org.icgc_argo.workflowgraphnode.components.Node.sourceToSinkProcessor;
 
 @Slf4j
 @Configuration
@@ -166,14 +167,14 @@ public class NodeService {
             .createTransactionalConsumerStream(
                 appConfig.getNodeProperties().getInput().getQueue(), String.class)
             .receive()
-            .map(workflowParamsFunction(appConfig.getNodeProperties()))
             .doOnNext(tx -> log.info("WorkflowParamsFunction result: {}", tx.get()))
             .<Transaction<RunRequest>>handle(
                 (tx, sink) -> {
                   try {
                     sink.next(
                         tx.map(
-                            sourceToSinkProcessor(appConfig.getNodeProperties()).apply(tx.get())));
+                            sourceToSinkProcessor(appConfig.getNodeProperties())
+                                .apply(toMap(tx.get()))));
                   } catch (Throwable e) {
                     log.error(e.getLocalizedMessage());
                     tx.reject();
