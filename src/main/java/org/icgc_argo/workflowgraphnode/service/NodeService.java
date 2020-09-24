@@ -21,7 +21,8 @@ import java.util.stream.Collectors;
 @Configuration
 public class NodeService {
 
-  private static final String NODE = "nodeStream";
+  private static final String INPUT_TO_RUNNING = "inputToRunning";
+  private static final String RUNNING_TO_COMPLETE = "runningToComplete";
 
   private final Map<String, Disposable> pipelines = Collections.synchronizedMap(new HashMap<>());
 
@@ -32,7 +33,8 @@ public class NodeService {
   public NodeService(@NonNull NodeConfiguration nodeConfiguration) {
     this.nodeConfiguration = nodeConfiguration;
 
-    startNode();
+    startInputToRunning();
+    startRunningToComplete();
   }
 
   public Map<String, PipeStatus> getStatus() {
@@ -41,12 +43,20 @@ public class NodeService {
         .collect(Collectors.toUnmodifiableMap(Entry::getKey, Entry::getValue));
   }
 
-  public void stopNode() {
-    pipelines.get(NODE).dispose();
+  public void stopInputToRunning() {
+    pipelines.get(INPUT_TO_RUNNING).dispose();
   }
 
-  public void startNode() {
-    startPipe(NODE, nodeConfiguration::nodeStream);
+  public void stopRunningToComplete() {
+    pipelines.get(RUNNING_TO_COMPLETE).dispose();
+  }
+
+  public void startInputToRunning() {
+    startPipe(INPUT_TO_RUNNING, nodeConfiguration::inputToRunning);
+  }
+
+  public void startRunningToComplete() {
+    startPipe(RUNNING_TO_COMPLETE, nodeConfiguration::runningToComplete);
   }
 
   /**

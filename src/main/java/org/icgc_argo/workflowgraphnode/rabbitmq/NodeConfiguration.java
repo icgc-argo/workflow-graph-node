@@ -48,10 +48,11 @@ public class NodeConfiguration {
     this.directInputSource = directInputSource;
   }
 
-  public Disposable nodeStream() {
+  public Disposable runningToComplete() {
     return rabbit
         .declareTopology(topologyConfig.completeTopology())
-        .createTransactionalProducerStream(String.class) // TODO replace with universal message schema
+        .createTransactionalProducerStream(
+            String.class) // TODO replace with universal message schema
         .route()
         .toExchange(nodeProperties.getComplete().getExchange())
         .and()
@@ -60,6 +61,30 @@ public class NodeConfiguration {
         .then()
         .send(runningToCompleteStream())
         .doOnNext(tx -> log.info("Completed: {}", tx.get()))
+        .subscribe(Transaction::commit);
+  }
+
+  public Disposable inputToRunning() {
+    Flux<Transaction<String>> launchWorkflowStream =
+        Flux.merge(directInputStream(), queuedInputStream())
+            .doOnNext(item -> log.info("Attempting to run workflow with: {}", item.get()))
+            .flatMap(
+                tx ->
+                    rdpcClient
+                        .startRun(tx.get())
+                        .flatMap(response -> Mono.fromCallable(() -> tx.map(response))));
+
+    return rabbit
+        .declareTopology(topologyConfig.runningTopology())
+        .createTransactionalProducerStream(String.class)
+        .route()
+        .toExchange(nodeProperties.getRunning().getExchange())
+        .and()
+        .whenNackByBroker()
+        .alwaysRetry(Duration.ofSeconds(5))
+        .then()
+        .send(launchWorkflowStream)
+        .doOnNext(tx -> log.info("Run request sent to RDPC: {}", tx.get()))
         .subscribe(Transaction::commit);
   }
 
@@ -80,36 +105,13 @@ public class NodeConfiguration {
                           return "COMPLETE".equals(s);
                         }))
         .doOnDiscard(Transaction.class, tx -> tx.rollback(true));
-        // TODO: transform to universal event type here
-  }
-
-  private Flux<Transaction<String>> inputToRunningStream() {
-    Flux<Transaction<String>> launchWorkflowStream =
-        Flux.merge(directInputStream(), queuedInputStream())
-            .doOnNext(item -> log.info("Attempting to run workflow with: {}", item.get()))
-            .flatMap(
-                tx ->
-                    rdpcClient
-                        .startRun(tx.get())
-                        .flatMap(response -> Mono.fromCallable(() -> tx.map(response))));
-
-    return rabbit
-        .declareTopology(topologyConfig.runningTopology())
-        .createTransactionalProducerStream(String.class)
-        .route()
-        .toExchange(nodeProperties.getRunning().getExchange())
-        .and()
-        .whenNackByBroker()
-        .alwaysRetry(Duration.ofSeconds(5))
-        .then()
-        .send(launchWorkflowStream)
-        .doOnNext(tx -> log.info("Run request sent to RDPC: {}", tx.get()));
+    // TODO: transform to universal event type here
   }
 
   private Flux<Transaction<RunRequest>> directInputStream() {
     return directInputSource
         .source()
-        .handle(handleInputToRunning())
+        .handle(handleInputToRunRequest())
         .doOnNext(tx -> log.info("Run request created: {}", tx.get()));
   }
 
@@ -131,18 +133,19 @@ public class NodeConfiguration {
         // resolves async by subscribing to it (ex. mono)
         .flatMap(node.gqlQuery())
         .doOnNext(tx -> log.info("GQL Response: {}", tx.get()))
-        .map(node.activationFunction())
+        .map(node.activationFunction()) // TODO: handle possible exceptions
         .doOnNext(tx -> log.info("Activation Result: {}", tx.get()))
-        .handle(handleInputToRunning())
+        .handle(handleInputToRunRequest())
         .doOnNext(tx -> log.info("Run request created: {}", tx.get()));
   }
 
   private BiConsumer<Transaction<Map<String, Object>>, SynchronousSink<Transaction<RunRequest>>>
-      handleInputToRunning() {
+      handleInputToRunRequest() {
     return (tx, sink) -> {
       try {
-        sink.next(tx.map(node.inputToRunning().apply(tx.get())));
+        sink.next(tx.map(node.inputToRunRequest().apply(tx.get())));
       } catch (Throwable e) {
+        // TODO: use generic exceptions here to handle this better
         log.error(e.getLocalizedMessage());
         tx.reject();
       }

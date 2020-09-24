@@ -64,7 +64,7 @@ public class Node {
                 tx.get()));
   }
 
-  public Function<Map<String, Object>, RunRequest> inputToRunning() {
+  public Function<Map<String, Object>, RunRequest> inputToRunRequest() {
     return workflowParamsResponse -> {
       try {
         return RunRequest.builder()
