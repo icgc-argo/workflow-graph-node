@@ -8,6 +8,7 @@ import lombok.NonNull;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import org.icgc_argo.workflowgraphnode.components.Node;
 import org.icgc_argo.workflowgraphnode.config.AppConfig;
 import org.icgc_argo.workflowgraphnode.model.PipeStatus;
 import org.icgc_argo.workflowgraphnode.model.RunRequest;
@@ -28,7 +29,6 @@ import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
 import static org.icgc_argo.workflow_graph_lib.utils.JacksonUtils.toMap;
-import static org.icgc_argo.workflowgraphnode.components.Node.sourceToSinkProcessor;
 
 @Slf4j
 @Configuration
@@ -47,6 +47,7 @@ public class NodeService {
   private final TopologyConfiguration topologyConfig;
   private final Source<String> runRequestSource;
   private final AppConfig appConfig;
+  private final Node node;
 
   @Autowired
   public NodeService(
@@ -54,12 +55,14 @@ public class NodeService {
       @NonNull RdpcClient rdpcClient,
       @NonNull TopologyConfiguration topologyConfig,
       @NonNull Source<String> runRequestSource,
-      @NonNull AppConfig appConfig) {
+      @NonNull AppConfig appConfig,
+      @NonNull Node node) {
     this.rabbit = rabbit;
     this.rdpcClient = rdpcClient;
     this.topologyConfig = topologyConfig;
     this.runRequestSource = runRequestSource;
     this.appConfig = appConfig;
+    this.node = node;
 
     startIngest();
     startQueued();
@@ -171,10 +174,7 @@ public class NodeService {
             .<Transaction<RunRequest>>handle(
                 (tx, sink) -> {
                   try {
-                    sink.next(
-                        tx.map(
-                            sourceToSinkProcessor(appConfig.getNodeProperties())
-                                .apply(toMap(tx.get()))));
+                    sink.next(tx.map(node.inputToRunning().apply(toMap(tx.get()))));
                   } catch (Throwable e) {
                     log.error(e.getLocalizedMessage());
                     tx.reject();
