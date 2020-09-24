@@ -1,20 +1,24 @@
 {
-  "workflow": {
-    "workflowUrl": "icgc-argo/nextflow-data-processing-utility-tools",
-    "workflowVersion": "2.2.0"
-  },
   "functionLanguage": "js",
-  "workflowParamsFunction": "return data;",
+  "filterFunction": "data.study !== 'PACA-CA'",
+  "gqlQueryString": "query ANALYSIS($study: String!) {\n  analyses(where: { study_eq: $study }) {\n    study\n    analysisId\n  }\n}",
+  "activationFunction": "return {...data.data.analyses[0]};",
   "input": {
-    "exchange": "ingest",
-    "queue": "queued"
+    "exchange": "example-node-0-complete",
+    "queue": "example-node-1"
   },
   "running": {
-    "exchange": "node-state",
-    "queue": "running"
+    "exchange": "example-node-1-running",
+    "queue": "example-node-1-running"
   },
   "complete": {
-    "exchange": "complete",
-    "queue": "default.complete"
+    "exchange": "example-node-1-complete",
+    "queue": "example-node-1-complete"
+  },
+  "workflow": {
+    "url": "icgc-argo/nextflow-data-processing-utility-tools",
+    "revision": "2.2.0",
+    "schema": "org.icgc_argo.schemas.WorkflowParams",
+    "schemaAvscPath": "/avro/WorkflowParams.avsc"
   }
 }

@@ -9,9 +9,9 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.icgc_argo.workflowgraphnode.config.AppConfig;
-import org.icgc_argo.workflowgraphnode.config.TopologyConfig;
 import org.icgc_argo.workflowgraphnode.model.PipeStatus;
 import org.icgc_argo.workflowgraphnode.model.RunRequest;
+import org.icgc_argo.workflowgraphnode.rabbitmq.TopologyConfiguration;
 import org.icgc_argo.workflowgraphnode.workflow.RdpcClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
@@ -44,7 +44,7 @@ public class NodeService {
   private final RabbitEndpointService rabbit;
 
   private final RdpcClient rdpcClient;
-  private final TopologyConfig topologyConfig;
+  private final TopologyConfiguration topologyConfig;
   private final Source<String> runRequestSource;
   private final AppConfig appConfig;
 
@@ -52,7 +52,7 @@ public class NodeService {
   public NodeService(
       @NonNull RabbitEndpointService rabbit,
       @NonNull RdpcClient rdpcClient,
-      @NonNull TopologyConfig topologyConfig,
+      @NonNull TopologyConfiguration topologyConfig,
       @NonNull Source<String> runRequestSource,
       @NonNull AppConfig appConfig) {
     this.rabbit = rabbit;
@@ -139,7 +139,7 @@ public class NodeService {
    */
   private Disposable ingestHttpJobs(Source<String> runRequestSource) {
     return rabbit
-        .declareTopology(topologyConfig.queueTopology())
+        .declareTopology(topologyConfig.inputTopology())
         .createTransactionalProducerStream(String.class)
         .route()
         .toExchange(appConfig.getNodeProperties().getInput().getExchange())
@@ -163,7 +163,7 @@ public class NodeService {
   private Disposable queuedToRunning() {
     final Flux<Transaction<RunRequest>> incomingStream =
         rabbit
-            .declareTopology(topologyConfig.queueTopology())
+            .declareTopology(topologyConfig.inputTopology())
             .createTransactionalConsumerStream(
                 appConfig.getNodeProperties().getInput().getQueue(), String.class)
             .receive()

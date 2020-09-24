@@ -15,12 +15,12 @@ public class Node {
     return workflowParamsResponse -> {
       try {
         return RunRequest.builder()
-            .workflowUrl(nodeProperties.getWorkflow().getWorkflowUrl())
+            .workflowUrl(nodeProperties.getWorkflow().getUrl())
             // TODO: params will be Generic record with schema provided to node
             .workflowParams(workflowParamsResponse)
             .workflowEngineParams( // TODO: going to require more engine params ...
                 WorkflowEngineParams.builder()
-                    .revision(nodeProperties.getWorkflow().getWorkflowVersion())
+                    .revision(nodeProperties.getWorkflow().getRevision())
                     .build())
             .build();
       } catch (Throwable e) {
