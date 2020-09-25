@@ -145,7 +145,7 @@ public class NodeConfiguration {
         // flatMap needs a function that returns a Publisher that it then
         // resolves async by subscribing to it (ex. mono)
         //        .flatMap(node.gqlQuery())
-        .map(tx -> tx.map(toMap(tx.get())))
+        .map(tx -> tx.map(toMap(tx.get()))) // TODO: temp until we move RDPC client
         .doOnNext(tx -> log.info("GQL Response: {}", tx.get()))
         .map(node.activationFunction()) // TODO: handle possible exceptions
         .doOnNext(tx -> log.info("Activation Result: {}", tx.get()))
