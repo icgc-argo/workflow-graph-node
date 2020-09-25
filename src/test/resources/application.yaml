@@ -1,0 +1,20 @@
+logging:
+  level:
+    org.icgc_argo.workflow_graph_node: debug
+    com.pivotal.rabbitmq.stream: debug
+
+rdpc:
+  url: https://wes.rdpc-dev.cancercollaboratory.org/api/v1/runs
+
+node:
+  jsonConfigPath: example-node-config.json
+
+rabbit:
+  default-endpoint-name: standalone
+  endpoints:
+    standalone:
+      host: localhost
+      username: guest
+      password: guest
+      port: 5672
+      managementPort: 15672

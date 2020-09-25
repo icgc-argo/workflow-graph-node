@@ -8,7 +8,7 @@ import lombok.Data;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.icgc_argo.workflowgraphnode.model.PipeStatus;
-import org.icgc_argo.workflowgraphnode.service.NodeService;
+import org.icgc_argo.workflowgraphnode.service.PipelineManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,19 +25,22 @@ public class NodeController {
   private static final ObjectMapper MAPPER = new ObjectMapper();
 
   /** Dependencies */
-  private final Sender<String> sender;
+  private final Sender<Map<String, Object>> sender;
 
-  private final NodeService service;
+  private final PipelineManager service;
 
   @Autowired
-  public NodeController(@NonNull Sender<String> sender, @NonNull NodeService service) {
+  public NodeController(
+      @NonNull Sender<Map<String, Object>> sender, @NonNull PipelineManager service) {
     this.sender = sender;
     this.service = service;
   }
 
   @PostMapping("/enqueue")
-  public Mono<ResponseEntity<String>> enqueueBatch(@RequestBody Mono<Map<String, Object>> job) {
-    return job.flatMap(runRequest -> Mono.fromCallable(() -> MAPPER.writeValueAsString(runRequest)))
+  public Mono<ResponseEntity<Map<String, Object>>> enqueueBatch(
+      @RequestBody Mono<Map<String, Object>> job) {
+    // TODO: needs to be validated/converted into a Generic Record w/ schema spec'd in config json
+    return job.flatMap(runRequest -> Mono.fromCallable(() -> runRequest))
         .flatMap(sender::send)
         .map(ResponseEntity::ok);
   }

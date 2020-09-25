@@ -1,13 +1,9 @@
 package org.icgc_argo.workflowgraphnode.workflow;
 
-import static java.lang.String.format;
-
 import com.apollographql.apollo.ApolloCall;
 import com.apollographql.apollo.ApolloClient;
 import com.apollographql.apollo.api.Response;
 import com.apollographql.apollo.exception.ApolloException;
-import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
@@ -22,6 +18,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
+
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
+
+import static java.lang.String.format;
 
 @Slf4j
 @Component
@@ -43,6 +44,27 @@ public class RdpcClient {
             .serverUrl(appConfig.getRdpcUrl())
             .okHttpClient(okHttpBuilder.build())
             .build();
+  }
+
+  private static void sinkError(MonoSink<?> sink, String message) {
+    log.error(message);
+    sink.error(new RuntimeException(message));
+  }
+
+  /**
+   * Adapter to convert between Models of workflow engine params for use with apollo
+   *
+   * @param params WorkflowEngineParams model owned by developer
+   * @return WorkflowEngineParams model owned by Apollo code gen
+   */
+  private static WorkflowEngineParams engineParamsAdapter(
+      @NotNull org.icgc_argo.workflowgraphnode.model.WorkflowEngineParams params) {
+    val builder = WorkflowEngineParams.builder();
+    builder.revision(params.getRevision());
+    builder.launchDir(params.getLaunchDir());
+    builder.projectDir(params.getProjectDir());
+    builder.workDir(params.getWorkDir());
+    return builder.build();
   }
 
   /**
@@ -148,26 +170,5 @@ public class RdpcClient {
                         sink.error(e);
                       }
                     }));
-  }
-
-  private static void sinkError(MonoSink<?> sink, String message) {
-    log.error(message);
-    sink.error(new RuntimeException(message));
-  }
-
-  /**
-   * Adapter to convert between Models of workflow engine params for use with apollo
-   *
-   * @param params WorkflowEngineParams model owned by developer
-   * @return WorkflowEngineParams model owned by Apollo code gen
-   */
-  private static WorkflowEngineParams engineParamsAdapter(
-      @NotNull org.icgc_argo.workflowgraphnode.model.WorkflowEngineParams params) {
-    val builder = WorkflowEngineParams.builder();
-    builder.revision(params.getRevision());
-    builder.launchDir(params.getLaunchDir());
-    builder.projectDir(params.getProjectDir());
-    builder.workDir(params.getWorkDir());
-    return builder.build();
   }
 }

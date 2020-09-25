@@ -1,0 +1,91 @@
+{
+  "name": "TestRecord",
+  "type": "record",
+  "fields": [
+    {
+      "name": "analysisId",
+      "type": "string"
+    },
+    {
+      "name": "donorId",
+      "type": "string"
+    },
+    {
+      "name": "runId",
+      "type": "string"
+    },
+    {
+      "name": "someStringArray",
+      "type": {
+        "type": "array",
+        "items": "string"
+      }
+    },
+    {
+      "name": "workflow",
+      "type": {
+        "name": "Workflow",
+        "type": "record",
+        "fields": [
+          {
+            "name": "runId",
+            "type": "string"
+          },
+          {
+            "name": "state",
+            "type": "string"
+          },
+          {
+            "name": "run",
+            "type": {
+              "name": "Run",
+              "type": "record",
+              "fields": [
+                {
+                  "name": "runId",
+                  "type": "string"
+                },
+                {
+                  "name": "state",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "donors",
+      "type": {
+        "type": "array",
+        "items": {
+          "name": "Donor",
+          "type": "record",
+          "fields": [
+            {
+              "name": "donorId",
+              "type": "string"
+            },
+            {
+              "name": "specimens",
+              "type": {
+                "type": "array",
+                "items": {
+                  "name": "Specimen",
+                  "type": "record",
+                  "fields": [
+                    {
+                      "name": "specimenId",
+                      "type": "string"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
