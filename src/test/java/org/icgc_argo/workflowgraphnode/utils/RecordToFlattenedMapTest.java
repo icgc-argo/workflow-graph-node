@@ -1,5 +1,8 @@
 package org.icgc_argo.workflowgraphnode.utils;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import java.io.IOException;
 import lombok.val;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
@@ -7,10 +10,6 @@ import org.apache.avro.generic.GenericRecordBuilder;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
-
-import java.io.IOException;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @SpringBootTest
 public class RecordToFlattenedMapTest {

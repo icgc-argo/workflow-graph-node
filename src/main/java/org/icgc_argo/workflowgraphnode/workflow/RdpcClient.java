@@ -45,6 +45,27 @@ public class RdpcClient {
             .build();
   }
 
+  private static void sinkError(MonoSink<?> sink, String message) {
+    log.error(message);
+    sink.error(new RuntimeException(message));
+  }
+
+  /**
+   * Adapter to convert between Models of workflow engine params for use with apollo
+   *
+   * @param params WorkflowEngineParams model owned by developer
+   * @return WorkflowEngineParams model owned by Apollo code gen
+   */
+  private static WorkflowEngineParams engineParamsAdapter(
+      @NotNull org.icgc_argo.workflowgraphnode.model.WorkflowEngineParams params) {
+    val builder = WorkflowEngineParams.builder();
+    builder.revision(params.getRevision());
+    builder.launchDir(params.getLaunchDir());
+    builder.projectDir(params.getProjectDir());
+    builder.workDir(params.getWorkDir());
+    return builder.build();
+  }
+
   /**
    * Start a new workflow run
    *
@@ -148,26 +169,5 @@ public class RdpcClient {
                         sink.error(e);
                       }
                     }));
-  }
-
-  private static void sinkError(MonoSink<?> sink, String message) {
-    log.error(message);
-    sink.error(new RuntimeException(message));
-  }
-
-  /**
-   * Adapter to convert between Models of workflow engine params for use with apollo
-   *
-   * @param params WorkflowEngineParams model owned by developer
-   * @return WorkflowEngineParams model owned by Apollo code gen
-   */
-  private static WorkflowEngineParams engineParamsAdapter(
-      @NotNull org.icgc_argo.workflowgraphnode.model.WorkflowEngineParams params) {
-    val builder = WorkflowEngineParams.builder();
-    builder.revision(params.getRevision());
-    builder.launchDir(params.getLaunchDir());
-    builder.projectDir(params.getProjectDir());
-    builder.workDir(params.getWorkDir());
-    return builder.build();
   }
 }

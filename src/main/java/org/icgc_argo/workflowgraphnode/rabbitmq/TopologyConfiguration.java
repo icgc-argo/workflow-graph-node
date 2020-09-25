@@ -1,20 +1,19 @@
 package org.icgc_argo.workflowgraphnode.rabbitmq;
 
+import static com.pivotal.rabbitmq.topology.ExchangeType.direct;
+import static com.pivotal.rabbitmq.topology.ExchangeType.fanout;
+
 import com.pivotal.rabbitmq.topology.ExchangeType;
 import com.pivotal.rabbitmq.topology.TopologyBuilder;
+import java.util.List;
+import java.util.function.Consumer;
+import java.util.stream.Stream;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.icgc_argo.workflowgraphnode.config.AppConfig;
 import org.icgc_argo.workflowgraphnode.config.NodeProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
-
-import java.util.List;
-import java.util.function.Consumer;
-import java.util.stream.Stream;
-
-import static com.pivotal.rabbitmq.topology.ExchangeType.direct;
-import static com.pivotal.rabbitmq.topology.ExchangeType.fanout;
 
 @Configuration
 public class TopologyConfiguration {

@@ -1,11 +1,16 @@
 package org.icgc_argo.workflowgraphnode.rabbitmq;
 
+import static org.icgc_argo.workflow_graph_lib.utils.JacksonUtils.toMap;
+
 import com.pivotal.rabbitmq.RabbitEndpointService;
 import com.pivotal.rabbitmq.source.Source;
 import com.pivotal.rabbitmq.stream.Transaction;
+import java.time.Duration;
+import java.util.Map;
+import java.util.function.BiConsumer;
+import java.util.stream.Collectors;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.avro.generic.GenericData;
 import org.icgc_argo.workflowgraphnode.components.Node;
 import org.icgc_argo.workflowgraphnode.config.AppConfig;
 import org.icgc_argo.workflowgraphnode.config.NodeProperties;
@@ -17,11 +22,6 @@ import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.SynchronousSink;
-
-import java.time.Duration;
-import java.util.Map;
-import java.util.function.BiConsumer;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Configuration
@@ -120,7 +120,7 @@ public class NodeConfiguration {
 
   private Flux<Transaction<RunRequest>> queuedInputStream() {
     // declare and merge all input queues provided in config
-    Flux<Transaction<GenericData.Record>> inputStreams =
+    Flux<Transaction<String>> inputStreams =
         Flux.merge(
             topologyConfig
                 .inputPropertiesAndTopologies()
@@ -130,7 +130,7 @@ public class NodeConfiguration {
                             .declareTopology(input.getTopologyBuilder())
                             .createTransactionalConsumerStream(
                                 // TODO: use universal event type here instead of Record
-                                input.getProperties().getQueue(), GenericData.Record.class)
+                                input.getProperties().getQueue(), String.class)
                             .receive())
                 .collect(Collectors.toList()));
 
@@ -144,7 +144,8 @@ public class NodeConfiguration {
         .doOnNext(tx -> log.info("Source Filter Pass: {}", tx.get()))
         // flatMap needs a function that returns a Publisher that it then
         // resolves async by subscribing to it (ex. mono)
-        .flatMap(node.gqlQuery())
+        //        .flatMap(node.gqlQuery())
+        .map(tx -> tx.map(toMap(tx.get())))
         .doOnNext(tx -> log.info("GQL Response: {}", tx.get()))
         .map(node.activationFunction()) // TODO: handle possible exceptions
         .doOnNext(tx -> log.info("Activation Result: {}", tx.get()))

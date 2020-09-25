@@ -1,10 +1,9 @@
 package org.icgc_argo.workflowgraphnode.config;
 
+import java.util.List;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.icgc_argo.workflow_graph_lib.polyglot.enums.GraphFunctionLanguage;
-
-import java.util.List;
 
 @Data
 @RequiredArgsConstructor
@@ -25,7 +24,6 @@ public class NodeProperties {
   private final TopologyProperties complete;
 
   private final WorkflowProperties workflow;
-
 
   @Data
   @RequiredArgsConstructor

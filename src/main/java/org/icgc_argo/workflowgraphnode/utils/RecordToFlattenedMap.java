@@ -1,13 +1,12 @@
 package org.icgc_argo.workflowgraphnode.utils;
 
-import lombok.val;
-import org.apache.avro.generic.GenericData;
-import reactor.core.publisher.Flux;
+import static java.lang.String.format;
 
 import java.util.Map;
 import java.util.stream.Collectors;
-
-import static java.lang.String.format;
+import lombok.val;
+import org.apache.avro.generic.GenericData;
+import reactor.core.publisher.Flux;
 
 public class RecordToFlattenedMap {
   public static Map<String, Object> from(GenericData.Record record) {
