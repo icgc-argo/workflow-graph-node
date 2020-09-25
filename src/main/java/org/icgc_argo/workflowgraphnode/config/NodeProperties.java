@@ -1,43 +1,47 @@
 package org.icgc_argo.workflowgraphnode.config;
 
 import java.util.List;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.icgc_argo.workflow_graph_lib.polyglot.enums.GraphFunctionLanguage;
 
 @Data
-@RequiredArgsConstructor
+@AllArgsConstructor
+@NoArgsConstructor
 public class NodeProperties {
 
-  private final GraphFunctionLanguage functionLanguage;
-  private final String filterFunction;
-  private final String gqlQueryString;
-  private final String activationFunction;
+  private GraphFunctionLanguage functionLanguage;
+  private String filterFunction;
+  private String gqlQueryString;
+  private String activationFunction;
 
   // Declares new subscribers on fanout exchange(s)
-  private final List<TopologyProperties> input;
+  private List<TopologyProperties> input;
 
   // Direct exchange internal to this Node
-  private final TopologyProperties running;
+  private TopologyProperties running;
 
   // Complete exchange with self-archiving complete queue
-  private final TopologyProperties complete;
+  private TopologyProperties complete;
 
-  private final WorkflowProperties workflow;
+  private WorkflowProperties workflow;
 
   @Data
-  @RequiredArgsConstructor
+  @AllArgsConstructor
+  @NoArgsConstructor
   public static class TopologyProperties {
-    private final String exchange;
-    private final String queue;
+    private String exchange;
+    private String queue;
   }
 
   @Data
   @RequiredArgsConstructor
   public static class WorkflowProperties {
-    private final String url;
-    private final String revision;
-    private final String schema;
-    private final String schemaAvscPath;
+    private String url;
+    private String revision;
+    private String schema;
+    private String schemaAvscPath;
   }
 }
