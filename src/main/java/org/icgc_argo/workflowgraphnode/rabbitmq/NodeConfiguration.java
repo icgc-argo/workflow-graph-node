@@ -129,6 +129,7 @@ public class NodeConfiguration {
                         rabbit
                             .declareTopology(input.getTopologyBuilder())
                             .createTransactionalConsumerStream(
+                                // TODO: use universal event type here instead of Record
                                 input.getProperties().getQueue(), GenericData.Record.class)
                             .receive())
                 .collect(Collectors.toList()));
