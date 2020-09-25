@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Configuration
-public class NodeService {
+public class PipelineManager {
 
   private static final String INPUT_TO_RUNNING = "inputToRunning";
   private static final String RUNNING_TO_COMPLETE = "runningToComplete";
@@ -30,7 +30,7 @@ public class NodeService {
   private final NodeConfiguration nodeConfiguration;
 
   @Autowired
-  public NodeService(@NonNull NodeConfiguration nodeConfiguration) {
+  public PipelineManager(@NonNull NodeConfiguration nodeConfiguration) {
     this.nodeConfiguration = nodeConfiguration;
 
     startInputToRunning();

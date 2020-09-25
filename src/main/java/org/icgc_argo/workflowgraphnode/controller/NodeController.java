@@ -7,7 +7,7 @@ import lombok.Data;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.icgc_argo.workflowgraphnode.model.PipeStatus;
-import org.icgc_argo.workflowgraphnode.service.NodeService;
+import org.icgc_argo.workflowgraphnode.service.PipelineManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -28,10 +28,10 @@ public class NodeController {
   /** Dependencies */
   private final Sender<Map<String, Object>> sender;
 
-  private final NodeService service;
+  private final PipelineManager service;
 
   @Autowired
-  public NodeController(@NonNull Sender<Map<String, Object>> sender, @NonNull NodeService service) {
+  public NodeController(@NonNull Sender<Map<String, Object>> sender, @NonNull PipelineManager service) {
     this.sender = sender;
     this.service = service;
   }
