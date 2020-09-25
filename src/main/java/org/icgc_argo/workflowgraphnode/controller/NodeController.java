@@ -39,6 +39,7 @@ public class NodeController {
   @PostMapping("/enqueue")
   public Mono<ResponseEntity<Map<String, Object>>> enqueueBatch(
       @RequestBody Mono<Map<String, Object>> job) {
+    // TODO: needs to be validated/converted into a Generic Record w/ schema spec'd in config json
     return job.flatMap(runRequest -> Mono.fromCallable(() -> runRequest))
         .flatMap(sender::send)
         .map(ResponseEntity::ok);

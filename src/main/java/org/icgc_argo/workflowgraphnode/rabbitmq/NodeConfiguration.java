@@ -65,6 +65,7 @@ public class NodeConfiguration {
   }
 
   public Disposable inputToRunning() {
+    // TODO: error handling and retry
     Flux<Transaction<String>> launchWorkflowStream =
         Flux.merge(directInputStream(), queuedInputStream())
             .doOnNext(item -> log.info("Attempting to run workflow with: {}", item.get()))
@@ -84,7 +85,7 @@ public class NodeConfiguration {
         .alwaysRetry(Duration.ofSeconds(5))
         .then()
         .send(launchWorkflowStream)
-        .doOnNext(tx -> log.info("Run request sent to RDPC: {}", tx.get()))
+        .doOnNext(tx -> log.info("Run request confirmed by RDPC, runId: {}", tx.get()))
         .subscribe(Transaction::commit);
   }
 
@@ -105,12 +106,13 @@ public class NodeConfiguration {
                           return "COMPLETE".equals(s);
                         }))
         .doOnDiscard(Transaction.class, tx -> tx.rollback(true));
-    // TODO: transform to universal event type here
+    // TODO: Enrich via graphQL and create universal event type here
   }
 
   private Flux<Transaction<RunRequest>> directInputStream() {
     return directInputSource
         .source()
+        // TODO: source will provide Generic Record with schema spec'd in config json
         .handle(handleInputToRunRequest())
         .doOnNext(tx -> log.info("Run request created: {}", tx.get()));
   }
@@ -120,7 +122,7 @@ public class NodeConfiguration {
         .declareTopology(topologyConfig.inputTopology())
         .createTransactionalConsumerStream(
             nodeProperties.getInput().getQueue(),
-            GenericData.Record.class) // TODO replace with universal message schema
+            GenericData.Record.class) // TODO: replace with universal message schema
         .receive()
         .filter(node.filter())
         .doOnDiscard(
@@ -135,6 +137,7 @@ public class NodeConfiguration {
         .doOnNext(tx -> log.info("GQL Response: {}", tx.get()))
         .map(node.activationFunction()) // TODO: handle possible exceptions
         .doOnNext(tx -> log.info("Activation Result: {}", tx.get()))
+        // TODO: activation response should be Generic Record with schema spec'd in config json
         .handle(handleInputToRunRequest())
         .doOnNext(tx -> log.info("Run request created: {}", tx.get()));
   }
