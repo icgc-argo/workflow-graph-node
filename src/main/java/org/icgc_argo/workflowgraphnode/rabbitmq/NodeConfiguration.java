@@ -123,7 +123,7 @@ public class NodeConfiguration {
     Flux<Transaction<GenericData.Record>> inputStreams =
         Flux.merge(
             topologyConfig
-                .inputs()
+                .inputPropertiesAndTopologies()
                 .map(
                     input ->
                         rabbit

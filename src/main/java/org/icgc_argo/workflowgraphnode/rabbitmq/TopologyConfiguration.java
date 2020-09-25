@@ -30,9 +30,9 @@ public class TopologyConfiguration {
     this.complete = appConfig.getNodeProperties().getComplete();
   }
 
-  public Stream<Input> inputs() {
+  public Stream<NodeInput> inputPropertiesAndTopologies() {
     return input.stream()
-        .map(inputItem -> new Input(inputItem, exchangeWithDLQTopoBuilder(inputItem, fanout)));
+        .map(inputItem -> new NodeInput(inputItem, exchangeWithDLQTopoBuilder(inputItem, fanout)));
   }
 
   public Consumer<TopologyBuilder> runningTopology() {
@@ -66,7 +66,7 @@ public class TopologyConfiguration {
 
   @Data
   @RequiredArgsConstructor
-  public static class Input {
+  public static class NodeInput {
     private final NodeProperties.TopologyProperties properties;
     private final Consumer<TopologyBuilder> topologyBuilder;
   }
