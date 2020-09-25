@@ -1,13 +1,9 @@
 package org.icgc_argo.workflowgraphnode.workflow;
 
-import static java.lang.String.format;
-
 import com.apollographql.apollo.ApolloCall;
 import com.apollographql.apollo.ApolloClient;
 import com.apollographql.apollo.api.Response;
 import com.apollographql.apollo.exception.ApolloException;
-import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
@@ -22,6 +18,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
+
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
+
+import static java.lang.String.format;
 
 @Slf4j
 @Component
