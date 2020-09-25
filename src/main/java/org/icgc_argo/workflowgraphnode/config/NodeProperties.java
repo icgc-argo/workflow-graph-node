@@ -4,6 +4,8 @@ import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.icgc_argo.workflow_graph_lib.polyglot.enums.GraphFunctionLanguage;
 
+import java.util.List;
+
 @Data
 @RequiredArgsConstructor
 public class NodeProperties {
@@ -13,8 +15,8 @@ public class NodeProperties {
   private final String gqlQueryString;
   private final String activationFunction;
 
-  // Declares new subscribers on fanout exchange
-  private final TopologyProperties input;
+  // Declares new subscribers on fanout exchange(s)
+  private final List<TopologyProperties> input;
 
   // Direct exchange internal to this Node
   private final TopologyProperties running;

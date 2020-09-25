@@ -21,6 +21,7 @@ import reactor.core.publisher.SynchronousSink;
 import java.time.Duration;
 import java.util.Map;
 import java.util.function.BiConsumer;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Configuration
@@ -118,12 +119,21 @@ public class NodeConfiguration {
   }
 
   private Flux<Transaction<RunRequest>> queuedInputStream() {
-    return rabbit
-        .declareTopology(topologyConfig.inputTopology())
-        .createTransactionalConsumerStream(
-            nodeProperties.getInput().getQueue(),
-            GenericData.Record.class) // TODO: replace with universal message schema
-        .receive()
+    // declare and merge all input queues provided in config
+    Flux<Transaction<GenericData.Record>> inputStreams =
+        Flux.merge(
+            topologyConfig
+                .inputs()
+                .map(
+                    input ->
+                        rabbit
+                            .declareTopology(input.getTopologyBuilder())
+                            .createTransactionalConsumerStream(
+                                input.getProperties().getQueue(), GenericData.Record.class)
+                            .receive())
+                .collect(Collectors.toList()));
+
+    return inputStreams
         .filter(node.filter())
         .doOnDiscard(
             Transaction.class,

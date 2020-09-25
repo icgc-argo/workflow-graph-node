@@ -3,10 +3,16 @@
   "filterFunction": "data.study !== 'PACA-CA'",
   "gqlQueryString": "query ANALYSIS($study: String!) {\n  analyses(where: { study_eq: $study }) {\n    study\n    analysisId\n  }\n}",
   "activationFunction": "return {...data.data.analyses[0]};",
-  "input": {
-    "exchange": "example-node-0-complete",
-    "queue": "example-node-1"
-  },
+  "input": [
+    {
+      "exchange": "example-node-0-complete",
+      "queue": "example-node-1"
+    },
+    {
+      "exchange": "queued-ingest-node-0",
+      "queue": "example-node-1"
+    }
+  ],
   "running": {
     "exchange": "example-node-1-running",
     "queue": "example-node-1-running"
