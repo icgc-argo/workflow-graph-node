@@ -5,10 +5,10 @@ import com.pivotal.rabbitmq.source.Source;
 import com.pivotal.rabbitmq.stream.Transaction;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import org.icgc_argo.workflow_graph_lib.workflow.client.RdpcClient;
 import org.icgc_argo.workflow_graph_lib.workflow.model.RunRequest;
 import org.icgc_argo.workflowgraphnode.components.Errors;
-import lombok.val;
 import org.icgc_argo.workflowgraphnode.components.Node;
 import org.icgc_argo.workflowgraphnode.config.AppConfig;
 import org.icgc_argo.workflowgraphnode.config.NodeProperties;
@@ -143,6 +143,7 @@ public class NodeConfiguration {
     for (NodeProperties.Filter filter : nodeProperties.getFilters()) {
       inputStreams
           .filter(node.filter(filter.getExpression()))
+          .onErrorContinue(Errors.handle())
           .doOnDiscard(
               Transaction.class,
               tx -> {
