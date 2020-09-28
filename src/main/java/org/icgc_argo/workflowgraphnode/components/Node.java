@@ -43,10 +43,10 @@ public class Node {
   //            .flatMap(gqlResponse -> Mono.fromCallable(() -> tx.map(gqlResponse)));
   //  }
 
-  public Predicate<Transaction<String>> filter() {
+  public Predicate<Transaction<String>> filter(String expression) {
     return tx ->
         evaluateBooleanExpression(
-            nodeProperties.getFunctionLanguage(), nodeProperties.getFilterFunction(), tx.get());
+            nodeProperties.getFunctionLanguage(), expression, tx.get());
   }
 
   public Function<Transaction<Map<String, Object>>, Transaction<Map<String, Object>>>

@@ -13,7 +13,7 @@ import org.icgc_argo.workflow_graph_lib.polyglot.enums.GraphFunctionLanguage;
 public class NodeProperties {
 
   private GraphFunctionLanguage functionLanguage;
-  private String filterFunction;
+  private List<Filter> filters;
   private String gqlQueryString;
   private String activationFunction;
 
@@ -34,6 +34,14 @@ public class NodeProperties {
   public static class TopologyProperties {
     private String exchange;
     private String queue;
+  }
+
+  @Data
+  @AllArgsConstructor
+  @NoArgsConstructor
+  public static class Filter {
+    private String expression;
+    private Boolean reject;
   }
 
   @Data

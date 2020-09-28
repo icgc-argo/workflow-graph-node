@@ -1,16 +1,11 @@
 package org.icgc_argo.workflowgraphnode.rabbitmq;
 
-import static org.icgc_argo.workflow_graph_lib.utils.JacksonUtils.toMap;
-
 import com.pivotal.rabbitmq.RabbitEndpointService;
 import com.pivotal.rabbitmq.source.Source;
 import com.pivotal.rabbitmq.stream.Transaction;
-import java.time.Duration;
-import java.util.Map;
-import java.util.function.BiConsumer;
-import java.util.stream.Collectors;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import org.icgc_argo.workflow_graph_lib.workflow.client.RdpcClient;
 import org.icgc_argo.workflow_graph_lib.workflow.model.RunRequest;
 import org.icgc_argo.workflowgraphnode.components.Errors;
@@ -23,6 +18,13 @@ import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.SynchronousSink;
+
+import java.time.Duration;
+import java.util.Map;
+import java.util.function.BiConsumer;
+import java.util.stream.Collectors;
+
+import static org.icgc_argo.workflow_graph_lib.utils.JacksonUtils.toMap;
 
 @Slf4j
 @Configuration
@@ -123,7 +125,7 @@ public class NodeConfiguration {
 
   private Flux<Transaction<RunRequest>> queuedInputStream() {
     // declare and merge all input queues provided in config
-    Flux<Transaction<String>> inputStreams =
+    val inputStreams =
         Flux.merge(
             topologyConfig
                 .inputPropertiesAndTopologies()
@@ -137,15 +139,25 @@ public class NodeConfiguration {
                             .receive())
                 .collect(Collectors.toList()));
 
+    // Apply user filters
+    for (NodeProperties.Filter filter : nodeProperties.getFilters()) {
+      inputStreams
+          .filter(node.filter(filter.getExpression()))
+          .onErrorContinue(Errors.handle())
+          .doOnDiscard(
+              Transaction.class,
+              tx -> {
+                if (filter.getReject()) {
+                  logFilterMessage("Filter failed (rejecting)", tx, filter);
+                  tx.reject();
+                } else {
+                  logFilterMessage("Filter failed (no ack)", tx, filter);
+                }
+              })
+          .doOnNext(tx -> logFilterMessage("Filter passed", tx, filter));
+    }
+
     return inputStreams
-        .filter(node.filter())
-        .onErrorContinue(Errors.handle())
-        .doOnDiscard(
-            Transaction.class,
-            tx -> {
-              log.info("Source Filter Fail (no ack): {}", tx.get());
-            })
-        .doOnNext(tx -> log.info("Source Filter Pass: {}", tx.get()))
         // flatMap needs a function that returns a Publisher that it then
         // resolves async by subscribing to it (ex. mono)
         //        .flatMap(node.gqlQuery())
@@ -163,5 +175,13 @@ public class NodeConfiguration {
   private BiConsumer<Transaction<Map<String, Object>>, SynchronousSink<Transaction<RunRequest>>>
       handleInputToRunRequest() {
     return (tx, sink) -> sink.next(tx.map(node.inputToRunRequest().apply(tx.get())));
+  }
+
+  private void logFilterMessage(String preText, Transaction tx, NodeProperties.Filter filter) {
+    log.info(
+        "{} for value: {}, with the following expression: {}",
+        preText,
+        tx.get(),
+        filter.getExpression());
   }
 }
