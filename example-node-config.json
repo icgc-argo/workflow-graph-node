@@ -1,6 +1,15 @@
 {
   "functionLanguage": "js",
-  "filterFunction": "data.study !== 'PACA-CA'",
+  "filters": [
+    {
+      "expression": "data.study !== 'PACA-CA'",
+      "reject": false
+    },
+    {
+      "expression": "data.analysisType !== 'sequencing_alignment'",
+      "reject": true
+    }
+  ],
   "gqlQueryString": "query ANALYSIS($study: String!) {\n  analyses(where: { study_eq: $study }) {\n    study\n    analysisId\n  }\n}",
   "activationFunction": "return {...data.data.analyses[0]};",
   "input": [
