@@ -47,7 +47,7 @@ public class Errors {
   private static void rejectTransactionOnException(
       Throwable throwable, Transaction<?> transaction) {
     log.error(
-        "Encountered Exception that is not mappable to GraphException. Rejecting Transaction",
+        "Encountered Exception that is not mappable to GraphException. Rejecting Transaction.",
         throwable);
     transaction.reject();
   }
