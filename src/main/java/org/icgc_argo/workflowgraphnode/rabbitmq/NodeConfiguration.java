@@ -176,7 +176,7 @@ public class NodeConfiguration {
     return (tx, sink) -> sink.next(tx.map(node.inputToRunRequest().apply(tx.get())));
   }
 
-  private void logFilterMessage(String preText, Transaction<String> tx, NodeProperties.Filter filter) {
+  private void logFilterMessage(String preText, Transaction tx, NodeProperties.Filter filter) {
     log.info(
         "{} for value: {}, with the following expression: {}",
         preText,
