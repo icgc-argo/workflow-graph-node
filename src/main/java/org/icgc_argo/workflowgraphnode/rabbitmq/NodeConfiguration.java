@@ -11,11 +11,12 @@ import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+import org.icgc_argo.workflow_graph_lib.workflow.client.RdpcClient;
+import org.icgc_argo.workflow_graph_lib.workflow.model.RunRequest;
+import org.icgc_argo.workflowgraphnode.components.Errors;
 import org.icgc_argo.workflowgraphnode.components.Node;
 import org.icgc_argo.workflowgraphnode.config.AppConfig;
 import org.icgc_argo.workflowgraphnode.config.NodeProperties;
-import org.icgc_argo.workflowgraphnode.model.RunRequest;
-import org.icgc_argo.workflowgraphnode.workflow.RdpcClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import reactor.core.Disposable;
@@ -106,7 +107,8 @@ public class NodeConfiguration {
                           log.info("Status for {}: {}", tx.get(), s);
                           return "COMPLETE".equals(s);
                         }))
-        .doOnDiscard(Transaction.class, tx -> tx.rollback(true));
+        .doOnDiscard(Transaction.class, tx -> tx.rollback(true))
+        .onErrorContinue(Errors.handle());
     // TODO: Enrich via graphQL and create universal event type here
   }
 
@@ -115,6 +117,7 @@ public class NodeConfiguration {
         .source()
         // TODO: source will provide Generic Record with schema spec'd in config json
         .handle(handleInputToRunRequest())
+        .onErrorContinue(Errors.handle())
         .doOnNext(tx -> log.info("Run request created: {}", tx.get()));
   }
 
@@ -136,6 +139,7 @@ public class NodeConfiguration {
 
     return inputStreams
         .filter(node.filter())
+        .onErrorContinue(Errors.handle())
         .doOnDiscard(
             Transaction.class,
             tx -> {
@@ -147,23 +151,17 @@ public class NodeConfiguration {
         //        .flatMap(node.gqlQuery())
         .map(tx -> tx.map(toMap(tx.get()))) // TODO: temp until we move RDPC client
         .doOnNext(tx -> log.info("GQL Response: {}", tx.get()))
-        .map(node.activationFunction()) // TODO: handle possible exceptions
+        .map(node.activationFunction())
+        .onErrorContinue(Errors.handle())
         .doOnNext(tx -> log.info("Activation Result: {}", tx.get()))
         // TODO: activation response should be Generic Record with schema spec'd in config json
         .handle(handleInputToRunRequest())
+        .onErrorContinue(Errors.handle())
         .doOnNext(tx -> log.info("Run request created: {}", tx.get()));
   }
 
   private BiConsumer<Transaction<Map<String, Object>>, SynchronousSink<Transaction<RunRequest>>>
       handleInputToRunRequest() {
-    return (tx, sink) -> {
-      try {
-        sink.next(tx.map(node.inputToRunRequest().apply(tx.get())));
-      } catch (Throwable e) {
-        // TODO: use generic exceptions here to handle this better
-        log.error(e.getLocalizedMessage());
-        tx.reject();
-      }
-    };
+    return (tx, sink) -> sink.next(tx.map(node.inputToRunRequest().apply(tx.get())));
   }
 }

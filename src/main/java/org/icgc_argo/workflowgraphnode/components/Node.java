@@ -8,11 +8,11 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import lombok.extern.slf4j.Slf4j;
+import org.icgc_argo.workflow_graph_lib.workflow.model.RunRequest;
+import org.icgc_argo.workflow_graph_lib.workflow.model.WorkflowEngineParams;
 import org.icgc_argo.workflowgraphnode.components.exceptions.WorkflowParamsFunctionException;
 import org.icgc_argo.workflowgraphnode.config.AppConfig;
 import org.icgc_argo.workflowgraphnode.config.NodeProperties;
-import org.icgc_argo.workflowgraphnode.model.RunRequest;
-import org.icgc_argo.workflowgraphnode.model.WorkflowEngineParams;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 
