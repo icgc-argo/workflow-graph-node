@@ -6,6 +6,7 @@ import com.pivotal.rabbitmq.stream.Transaction;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import org.icgc_argo.workflow_graph_lib.schema.GraphEvent;
 import org.icgc_argo.workflow_graph_lib.workflow.client.RdpcClient;
 import org.icgc_argo.workflow_graph_lib.workflow.model.RunRequest;
 import org.icgc_argo.workflowgraphnode.components.Errors;
@@ -55,8 +56,7 @@ public class NodeConfiguration {
   public Disposable runningToComplete() {
     return rabbit
         .declareTopology(topologyConfig.completeTopology())
-        .createTransactionalProducerStream(
-            String.class) // TODO replace with universal message schema
+        .createTransactionalProducerStream(GraphEvent.class)
         .route()
         .toExchange(nodeProperties.getComplete().getExchange())
         .and()
@@ -93,7 +93,7 @@ public class NodeConfiguration {
         .subscribe(Transaction::commit);
   }
 
-  private Flux<Transaction<String>> runningToCompleteStream() {
+  private Flux<Transaction<GraphEvent>> runningToCompleteStream() {
     return rabbit
         .declareTopology(topologyConfig.runningTopology())
         .createTransactionalConsumerStream(nodeProperties.getRunning().getQueue(), String.class)
@@ -110,8 +110,25 @@ public class NodeConfiguration {
                           return "COMPLETE".equals(s);
                         }))
         .doOnDiscard(Transaction.class, tx -> tx.rollback(true))
-        .onErrorContinue(Errors.handle());
-    // TODO: Enrich via graphQL and create universal event type here
+        .onErrorContinue(Errors.handle())
+        .flatMap(
+            tx ->
+                rdpcClient
+                    .createGraphEventsForRun(tx.get())
+                    .flatMapIterable(
+                        response ->
+                            response.stream()
+                                .map(tx::spawn)
+                                .collect(
+                                    Collectors.collectingAndThen(
+                                        Collectors.toList(),
+                                        list -> {
+                                          // commit the parent transaction after spawning children
+                                          // (won't be fully committed until each child is
+                                          // committed)
+                                          tx.commit();
+                                          return list;
+                                        }))));
   }
 
   private Flux<Transaction<RunRequest>> directInputStream() {
