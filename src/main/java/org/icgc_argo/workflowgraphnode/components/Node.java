@@ -2,12 +2,14 @@ package org.icgc_argo.workflowgraphnode.components;
 
 import static org.icgc_argo.workflow_graph_lib.polyglot.Polyglot.evaluateBooleanExpression;
 import static org.icgc_argo.workflow_graph_lib.polyglot.Polyglot.runMainFunctionWithData;
+import static org.icgc_argo.workflow_graph_lib.utils.JacksonUtils.convertValue;
 
 import com.pivotal.rabbitmq.stream.Transaction;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import lombok.extern.slf4j.Slf4j;
+import org.icgc_argo.workflow_graph_lib.schema.GraphEvent;
 import org.icgc_argo.workflow_graph_lib.workflow.model.RunRequest;
 import org.icgc_argo.workflow_graph_lib.workflow.model.WorkflowEngineParams;
 import org.icgc_argo.workflowgraphnode.components.exceptions.WorkflowParamsFunctionException;
@@ -43,10 +45,10 @@ public class Node {
   //            .flatMap(gqlResponse -> Mono.fromCallable(() -> tx.map(gqlResponse)));
   //  }
 
-  public Predicate<Transaction<String>> filter(String expression) {
+  public Predicate<Transaction<GraphEvent>> filter(String expression) {
     return tx ->
         evaluateBooleanExpression(
-            nodeProperties.getFunctionLanguage(), expression, tx.get());
+            nodeProperties.getFunctionLanguage(), expression, convertValue(tx.get(), Map.class));
   }
 
   public Function<Transaction<Map<String, Object>>, Transaction<Map<String, Object>>>
