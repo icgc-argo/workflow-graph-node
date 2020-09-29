@@ -64,6 +64,7 @@ public class NodeConfiguration {
         .alwaysRetry(Duration.ofSeconds(5))
         .then()
         .send(runningToCompleteStream())
+        .onErrorContinue(Errors.handle())
         .doOnNext(tx -> log.info("Completed: {}", tx.get()))
         .subscribe(Transaction::commit);
   }
@@ -115,6 +116,7 @@ public class NodeConfiguration {
             tx ->
                 rdpcClient
                     .createGraphEventsForRun(tx.get())
+                    .onErrorContinue(Errors.handle())
                     .flatMapIterable(
                         response ->
                             response.stream()
