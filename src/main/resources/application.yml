@@ -17,3 +17,12 @@ spring:
 
 node:
   jsonConfigPath: example-node-config.json
+
+dev:
+  exchange: ""
+  event:
+    analysisId: ""
+    analysisState: ""
+    analysisType: ""
+    studyId: ""
+    experimentalStrategy: ""
