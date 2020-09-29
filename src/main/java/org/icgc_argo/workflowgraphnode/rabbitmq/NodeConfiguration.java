@@ -127,7 +127,7 @@ public class NodeConfiguration {
                                         list -> {
                                           // commit the parent transaction after spawning children
                                           // (won't be fully committed until each child is
-                                          // committed)
+                                          // committed once it is sent to the complete exchange)
                                           tx.commit();
                                           return list;
                                         }))));
