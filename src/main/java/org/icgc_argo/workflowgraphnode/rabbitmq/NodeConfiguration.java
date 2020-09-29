@@ -25,8 +25,6 @@ import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
-import static java.util.Collections.emptyMap;
-
 @Slf4j
 @Configuration
 public class NodeConfiguration {
