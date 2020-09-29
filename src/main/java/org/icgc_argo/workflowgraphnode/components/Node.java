@@ -51,14 +51,14 @@ public class Node {
             nodeProperties.getFunctionLanguage(), expression, convertValue(tx.get(), Map.class));
   }
 
-  public Function<Transaction<GraphEvent>, Transaction<Map<String, Object>>>
+  public Function<Transaction<Map<String, Object>>, Transaction<Map<String, Object>>>
       activationFunction() {
     return tx ->
         tx.map(
             runMainFunctionWithData(
                 nodeProperties.getFunctionLanguage(),
                 nodeProperties.getActivationFunction(),
-                    convertValue(tx.get(), Map.class)));
+                tx.get()));
   }
 
   public Function<Map<String, Object>, RunRequest> inputToRunRequest() {

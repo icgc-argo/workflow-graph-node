@@ -25,6 +25,8 @@ import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
+import static java.util.Collections.emptyMap;
+
 @Slf4j
 @Configuration
 public class NodeConfiguration {
@@ -133,7 +135,6 @@ public class NodeConfiguration {
                         rabbit
                             .declareTopology(input.getTopologyBuilder())
                             .createTransactionalConsumerStream(
-                                // TODO: use universal event type here instead of Record
                                 input.getProperties().getQueue(), GraphEvent.class)
                             .receive())
                 .collect(Collectors.toList()));
@@ -160,7 +161,8 @@ public class NodeConfiguration {
         // flatMap needs a function that returns a Publisher that it then
         // resolves async by subscribing to it (ex. mono)
         //        .flatMap(node.gqlQuery())
-        .map(tx -> tx.map(tx.get())) // TODO: temp until we move RDPC client
+        // TODO: execute gql query with GraphEvent and map tx to GQLResponse
+        .map(tx -> tx.map(Map.<String, Object>of("data", "value")))
         .doOnNext(tx -> log.info("GQL Response: {}", tx.get()))
         .map(node.activationFunction())
         .onErrorContinue(Errors.handle())
