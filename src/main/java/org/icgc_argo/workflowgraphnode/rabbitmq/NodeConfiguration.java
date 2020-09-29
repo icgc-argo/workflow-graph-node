@@ -6,6 +6,7 @@ import com.pivotal.rabbitmq.stream.Transaction;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import org.icgc_argo.workflow_graph_lib.schema.GraphEvent;
 import org.icgc_argo.workflow_graph_lib.workflow.client.RdpcClient;
 import org.icgc_argo.workflow_graph_lib.workflow.model.RunRequest;
 import org.icgc_argo.workflowgraphnode.components.Errors;
@@ -23,8 +24,6 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
-
-import static org.icgc_argo.workflow_graph_lib.utils.JacksonUtils.toMap;
 
 @Slf4j
 @Configuration
@@ -135,7 +134,7 @@ public class NodeConfiguration {
                             .declareTopology(input.getTopologyBuilder())
                             .createTransactionalConsumerStream(
                                 // TODO: use universal event type here instead of Record
-                                input.getProperties().getQueue(), String.class)
+                                input.getProperties().getQueue(), GraphEvent.class)
                             .receive())
                 .collect(Collectors.toList()));
 
@@ -161,7 +160,7 @@ public class NodeConfiguration {
         // flatMap needs a function that returns a Publisher that it then
         // resolves async by subscribing to it (ex. mono)
         //        .flatMap(node.gqlQuery())
-        .map(tx -> tx.map(toMap(tx.get()))) // TODO: temp until we move RDPC client
+        .map(tx -> tx.map(tx.get())) // TODO: temp until we move RDPC client
         .doOnNext(tx -> log.info("GQL Response: {}", tx.get()))
         .map(node.activationFunction())
         .onErrorContinue(Errors.handle())
