@@ -2,16 +2,16 @@
   "functionLanguage": "js",
   "filters": [
     {
-      "expression": "data.study !== 'PACA-CA'",
+      "expression": "data.study === 'JAS-CA'",
       "reject": false
     },
     {
-      "expression": "data.analysisType !== 'sequencing_alignment'",
+      "expression": "data.analysisType === 'variantCall'",
       "reject": true
     }
   ],
-  "gqlQueryString": "query ANALYSIS($study: String!) {\n  analyses(where: { study_eq: $study }) {\n    study\n    analysisId\n  }\n}",
-  "activationFunction": "return {...data.data.analyses[0]};",
+  "gqlQueryString": "query ANALYSIS($analysisId: String!) {\n  analyses(filter: {analysisId: $analysisId}) {\n    analysisId\n    studyId\n  }\n}",
+  "activationFunction": "return {...data.data.analyses[0], \"score_url\": \"https://score.rdpc-dev.cancercollaboratory.org\", \"song_url\": \"https://song.rdpc-dev.cancercollaboratory.org\"};",
   "input": [
     {
       "exchange": "example-node-0-complete",
@@ -32,7 +32,7 @@
   },
   "workflow": {
     "url": "icgc-argo/nextflow-data-processing-utility-tools",
-    "revision": "2.2.0",
+    "revision": "2.3.0",
     "schema": "org.icgc_argo.schemas.WorkflowParams",
     "schemaAvscPath": "/avro/WorkflowParams.avsc"
   }
