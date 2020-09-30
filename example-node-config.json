@@ -32,7 +32,7 @@
   },
   "workflow": {
     "url": "icgc-argo/nextflow-data-processing-utility-tools",
-    "revision": "2.3.0",
+    "revision": "2.4.0",
     "schema": "org.icgc_argo.schemas.WorkflowParams",
     "schemaAvscPath": "/avro/WorkflowParams.avsc"
   }
