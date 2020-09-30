@@ -85,6 +85,8 @@ public class NodeConfiguration {
     Flux<Transaction<String>> launchWorkflowStream =
         Flux.merge(directInputStream(), queuedInputStream())
             .doOnNext(item -> log.info("Attempting to run workflow with: {}", item.get()))
+            // flatMap needs a function that returns a Publisher that it then
+            // resolves async by subscribing to it (ex. mono)
             .flatMap(
                 tx ->
                     rdpcClient
@@ -188,11 +190,7 @@ public class NodeConfiguration {
     }
 
     return inputStreams
-        // flatMap needs a function that returns a Publisher that it then
-        // resolves async by subscribing to it (ex. mono)
-        //        .flatMap(node.gqlQuery())
-        // TODO: execute gql query with GraphEvent and map tx to GQLResponse
-        .map(tx -> tx.map(Map.<String, Object>of("data", "value")))
+        .flatMap(node.gqlQuery())
         .doOnNext(tx -> log.info("GQL Response: {}", tx.get()))
         .map(node.activationFunction())
         .onErrorContinue(Errors.handle())
