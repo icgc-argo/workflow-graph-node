@@ -1,5 +1,5 @@
 Spring Boot Version: ${spring-boot.formatted-version}
-Workflow Relay Version: ${application.version}
+Workflow-Graph-Node Version: ${application.version}
 ${AnsiColor.CYAN}      ___           ___           ___           ___
 ${AnsiColor.CYAN}     /  /\         /  /\         /  /\         /  /\
 ${AnsiColor.CYAN}    /  /::|       /  /::\       /  /::\       /  /::\
@@ -12,4 +12,4 @@ ${AnsiColor.CYAN}     |__|::/     \  \:\/:/     \  \:\/:/     \  \:\_\/
 ${AnsiColor.CYAN}     /__/:/       \  \::/       \__\::/       \  \:\
 ${AnsiColor.CYAN}     \__\/         \__\/            ~~         \__\/
 Spring Boot Version: ${spring-boot.formatted-version}
-Workflow Relay Version: ${application.version}
+Workflow-Graph-Node Version: ${application.version}

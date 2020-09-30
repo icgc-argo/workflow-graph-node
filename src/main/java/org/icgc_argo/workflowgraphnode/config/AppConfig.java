@@ -1,6 +1,7 @@
 package org.icgc_argo.workflowgraphnode.config;
 
 import static java.lang.String.format;
+import static java.util.Arrays.asList;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pivotal.rabbitmq.ReactiveRabbit;
@@ -15,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 
 @Slf4j
 @Configuration
@@ -29,11 +31,17 @@ public class AppConfig {
   @SneakyThrows
   public AppConfig(
       @Value("${node.jsonConfigPath}") String jsonConfigPath,
-      @Autowired ReactiveRabbit reactiveRabbit) {
+      @Autowired ReactiveRabbit reactiveRabbit,
+      @Autowired Environment environment) {
     val inputStream = new FileInputStream(jsonConfigPath);
     this.nodeProperties = new ObjectMapper().readValue(inputStream, NodeProperties.class);
     this.reactiveRabbit = reactiveRabbit;
-    loadWorkflowSchema();
+
+    if (!asList(environment.getActiveProfiles()).contains("test")) {
+      loadWorkflowSchema();
+    } else {
+      log.info("Running with test profile enabled, will not load workflow schema.");
+    }
   }
 
   @SneakyThrows
