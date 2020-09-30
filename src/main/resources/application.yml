@@ -5,6 +5,8 @@ rabbit:
       host: localhost
       port: 5672
       managementPort:
+  schema:
+    registryURL: http://localhost:8990
 
 logging.level.root: INFO
 

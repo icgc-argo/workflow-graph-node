@@ -49,7 +49,8 @@ public class NodeProperties {
   public static class WorkflowProperties {
     private String url;
     private String revision;
-    private String schema;
-    private String schemaAvscPath;
+    private String schemaName;
+    private String schemaNamespace;
+    private String schemaVersion;
   }
 }
