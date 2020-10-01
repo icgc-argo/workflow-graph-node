@@ -1,0 +1,11 @@
+{
+  "type" : "record",
+  "name" : "WorkflowParamsTest",
+  "namespace": "org.icgc_argo.workflow_graph_lib.schema",
+  "fields" : [
+    {
+      "name" : "analysisId" ,
+      "type" : "string"
+    }
+  ]
+}

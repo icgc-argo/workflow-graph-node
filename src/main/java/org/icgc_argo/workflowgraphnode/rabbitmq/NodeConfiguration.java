@@ -194,9 +194,7 @@ public class NodeConfiguration {
         .doOnNext(tx -> log.info("GQL Response: {}", tx.get()))
         .map(node.activationFunction())
         .onErrorContinue(Errors.handle())
-        .handle(
-            verifyParamsWithSchema()) // Verify output of activation fn matches workflow param
-                                      // schema
+        .handle(verifyParamsWithSchema()) // Verify output of act-fn matches wf param schema
         .onErrorContinue(Errors.handle())
         .doOnNext(tx -> log.info("Activation Result: {}", tx.get()))
         .handle(handleInputToRunRequest())

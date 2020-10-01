@@ -9,6 +9,11 @@
       "name": "wes.url",
       "type": "java.lang.String",
       "description": "Root URL for RDPC GraphQL API."
+    },
+    {
+      "name": "node.localSchemaPath",
+      "type": "java.lang.String",
+      "description": "Path to params schema on filesystem when registry is not enabled."
     }
   ]
 }
