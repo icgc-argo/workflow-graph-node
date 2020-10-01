@@ -1,11 +1,20 @@
 package org.icgc_argo.workflowgraphnode.rabbitmq;
 
+import static java.lang.String.format;
+
 import com.pivotal.rabbitmq.RabbitEndpointService;
+import com.pivotal.rabbitmq.ReactiveRabbit;
 import com.pivotal.rabbitmq.source.Source;
 import com.pivotal.rabbitmq.stream.Transaction;
+import java.time.Duration;
+import java.util.Map;
+import java.util.function.BiConsumer;
+import java.util.stream.Collectors;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import org.apache.avro.AvroRuntimeException;
+import org.icgc_argo.workflow_graph_lib.exceptions.DeadLetterQueueableException;
 import org.icgc_argo.workflow_graph_lib.schema.GraphEvent;
 import org.icgc_argo.workflow_graph_lib.workflow.client.RdpcClient;
 import org.icgc_argo.workflow_graph_lib.workflow.model.RunRequest;
@@ -20,35 +29,39 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.SynchronousSink;
 
-import java.time.Duration;
-import java.util.Map;
-import java.util.function.BiConsumer;
-import java.util.stream.Collectors;
-
 @Slf4j
 @Configuration
 public class NodeConfiguration {
   private final RdpcClient rdpcClient;
   private final RabbitEndpointService rabbit;
+  private final ReactiveRabbit reactiveRabbit;
   private final TopologyConfiguration topologyConfig;
   private final NodeProperties nodeProperties;
   private final Node node;
   private final Source<Map<String, Object>> directInputSource;
+  private final String schemaFullName;
 
   @Autowired
   public NodeConfiguration(
       @NonNull RdpcClient rdpcClient,
       @NonNull RabbitEndpointService rabbit,
+      @NonNull ReactiveRabbit reactiveRabbit,
       @NonNull TopologyConfiguration topologyConfig,
       @NonNull AppConfig appConfig,
       @NonNull Node node,
       @NonNull Source<Map<String, Object>> directInputSource) {
     this.rdpcClient = rdpcClient;
     this.rabbit = rabbit;
+    this.reactiveRabbit = reactiveRabbit;
     this.topologyConfig = topologyConfig;
     this.nodeProperties = appConfig.getNodeProperties();
     this.node = node;
     this.directInputSource = directInputSource;
+    this.schemaFullName =
+        format(
+            "%s.%s",
+            this.nodeProperties.getWorkflow().getSchemaNamespace(),
+            this.nodeProperties.getWorkflow().getSchemaName());
   }
 
   public Disposable runningToComplete() {
@@ -136,7 +149,8 @@ public class NodeConfiguration {
   private Flux<Transaction<RunRequest>> directInputStream() {
     return directInputSource
         .source()
-        // TODO: source will provide Generic Record with schema spec'd in config json
+        .handle(verifyParamsWithSchema()) // verify manually provided input matches schema
+        .onErrorContinue(Errors.handle())
         .handle(handleInputToRunRequest())
         .onErrorContinue(Errors.handle())
         .doOnNext(tx -> log.info("Run request created: {}", tx.get()));
@@ -180,8 +194,11 @@ public class NodeConfiguration {
         .doOnNext(tx -> log.info("GQL Response: {}", tx.get()))
         .map(node.activationFunction())
         .onErrorContinue(Errors.handle())
+        .handle(
+            verifyParamsWithSchema()) // Verify output of activation fn matches workflow param
+                                      // schema
+        .onErrorContinue(Errors.handle())
         .doOnNext(tx -> log.info("Activation Result: {}", tx.get()))
-        // TODO: activation response should be Generic Record with schema spec'd in config json
         .handle(handleInputToRunRequest())
         .onErrorContinue(Errors.handle())
         .doOnNext(tx -> log.info("Run request created: {}", tx.get()));
@@ -190,6 +207,29 @@ public class NodeConfiguration {
   private BiConsumer<Transaction<Map<String, Object>>, SynchronousSink<Transaction<RunRequest>>>
       handleInputToRunRequest() {
     return (tx, sink) -> sink.next(tx.map(node.inputToRunRequest().apply(tx.get())));
+  }
+
+  /**
+   * Helper that returns a function that will use the schema in the workflow configuration to
+   * validate incoming inputs to the workflow. It does not actually transform the input, it emits
+   * the same Map it received but it does attempt to construct an Avro GenericData.Record for
+   * validation.
+   *
+   * @return BiConsumer that takes the transaction and synchronous sink of the Flux/Mono.
+   */
+  private BiConsumer<
+          Transaction<Map<String, Object>>, SynchronousSink<Transaction<Map<String, Object>>>>
+      verifyParamsWithSchema() {
+    return (tx, sink) -> {
+      val newRecord = reactiveRabbit.schemaManager().newRecord(schemaFullName);
+      try {
+        tx.get().forEach(newRecord::put);
+      } catch (AvroRuntimeException e) {
+        log.error("Provided input parameters do not match parameter schema specified by workflow");
+        sink.error(new DeadLetterQueueableException(e));
+      }
+      sink.next(tx);
+    };
   }
 
   private void logFilterMessage(String preText, Transaction tx, NodeProperties.Filter filter) {

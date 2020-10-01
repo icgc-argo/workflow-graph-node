@@ -5,8 +5,8 @@ rabbit:
       host: localhost
       port: 5672
       managementPort:
-  schema:
-    registryURL: http://localhost:8990
+#  schema:
+#    registryURL: http://localhost:8990
 
 logging.level.root: INFO
 
@@ -19,12 +19,3 @@ spring:
 
 node:
   jsonConfigPath: example-node-config.json
-
-dev:
-  exchange: ""
-  event:
-    analysisId: ""
-    analysisState: ""
-    analysisType: ""
-    studyId: ""
-    experimentalStrategy: ""
