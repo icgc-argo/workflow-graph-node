@@ -2,6 +2,8 @@ package org.icgc_argo.workflowgraphnode.rabbitmq;
 
 import com.pivotal.rabbitmq.RabbitEndpointService;
 import com.pivotal.rabbitmq.topology.ExchangeType;
+import java.util.Collections;
+import java.util.List;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
@@ -13,9 +15,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
-
-import java.util.Collections;
-import java.util.List;
 
 @Slf4j
 @Configuration
