@@ -7,12 +7,14 @@ In addition to running the workflows, the responsibilities of this component als
 and producing output to another message queue.  
 
 ## Technology
-- Java 11
+- Java 11 on GraalVM
 - Spring Boot
     - Webflux
 - RabbitMQ
 - Reactor
 - Reactor-RabbitMQ-Streams
+- Avro
+- Apollo GraphQL 
 
 ## Building
 ```bash
