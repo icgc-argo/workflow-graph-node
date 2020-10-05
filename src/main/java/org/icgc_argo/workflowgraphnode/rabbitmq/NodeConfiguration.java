@@ -20,6 +20,7 @@ import org.icgc_argo.workflow_graph_lib.workflow.client.RdpcClient;
 import org.icgc_argo.workflow_graph_lib.workflow.model.RunRequest;
 import org.icgc_argo.workflowgraphnode.components.Errors;
 import org.icgc_argo.workflowgraphnode.components.Node;
+import org.icgc_argo.workflowgraphnode.components.Workflows;
 import org.icgc_argo.workflowgraphnode.config.AppConfig;
 import org.icgc_argo.workflowgraphnode.config.NodeProperties;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -113,17 +114,8 @@ public class NodeConfiguration {
         .createTransactionalConsumerStream(nodeProperties.getRunning().getQueue(), String.class)
         .receive()
         .delayElements(Duration.ofSeconds(10))
-        .doOnNext(r -> log.info("Checking status of: {}", r.get()))
-        .filterWhen(
-            tx ->
-                rdpcClient
-                    .getWorkflowStatus(tx.get())
-                    .map(
-                        s -> {
-                          log.info("Status for {}: {}", tx.get(), s);
-                          return "COMPLETE".equals(s);
-                        }))
-        .doOnDiscard(Transaction.class, tx -> tx.rollback(true))
+        .doOnNext(r -> log.debug("Checking status of: {}", r.get()))
+        .handle(Workflows.handleRunStatus(rdpcClient))
         .onErrorContinue(Errors.handle())
         .flatMap(
             tx ->
