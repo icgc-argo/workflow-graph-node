@@ -1,7 +1,7 @@
 #############################
 #   Builder
 #############################
-FROM icgcargo/graalvm:java11-20.2.0-extras as builder
+FROM icgcargo/graalvm:java11-20.2.0-extras-1.0.0 as builder
 WORKDIR /usr/src/app
 ADD . .
 RUN ./mvnw clean package -DskipTests
@@ -9,7 +9,7 @@ RUN ./mvnw clean package -DskipTests
 #############################
 #   Server
 #############################
-FROM icgcargo/graalvm:java11-20.2.0-extras
+FROM icgcargo/graalvm:java11-20.2.0-extras-1.0.0
 
 ENV APP_HOME /srv
 ENV APP_USER wfuser
