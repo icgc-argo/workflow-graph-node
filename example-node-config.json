@@ -2,7 +2,7 @@
   "functionLanguage": "js",
   "filters": [
     {
-      "expression": "data.studyId === 'JAS-C'",
+      "expression": "data.studyId === 'JAS-CA'",
       "reject": false
     },
     {

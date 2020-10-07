@@ -2,15 +2,16 @@ package org.icgc_argo.workflowgraphnode.components;
 
 import com.pivotal.rabbitmq.stream.Transaction;
 import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import org.icgc_argo.workflow_graph_lib.polyglot.enums.GraphFunctionLanguage;
 import org.icgc_argo.workflow_graph_lib.schema.GraphEvent;
 import org.icgc_argo.workflow_graph_lib.workflow.client.RdpcClient;
 import org.icgc_argo.workflowgraphnode.config.NodeProperties;
-import org.springframework.core.ParameterizedTypeReference;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -20,30 +21,49 @@ import static org.icgc_argo.workflow_graph_lib.utils.JacksonUtils.toMap;
 
 @Slf4j
 public class Node {
-
   public static Function<Flux<Transaction<GraphEvent>>, Flux<Transaction<GraphEvent>>>
       createFilterTransformer(NodeProperties nodeProperties) {
+
+    AtomicReference<NodeProperties.Filter> failedFilter =
+        new AtomicReference<>(new NodeProperties.Filter());
+
     return input ->
-        nodeProperties.getFilters().stream()
-            .reduce(
-                input,
-                (flux, filter) ->
-                    flux.filter(
-                            filter(nodeProperties.getFunctionLanguage(), filter.getExpression()))
-                        .onErrorContinue(Errors.handle())
-                        .doOnNext(tx -> logFilterMessage("Filter passed", tx, filter))
-                        .doOnDiscard(
-                            Transaction.class,
-                            (tx) -> {
-                              if (filter.getReject()) {
-                                logFilterMessage("Filter failed (rejecting)", tx, filter);
-                                tx.reject();
-                              } else {
-                                logFilterMessage("Filter failed (no ack)", tx, filter);
+        input
+            .filter(
+                tx ->
+                    nodeProperties.getFilters().stream()
+                        .reduce(
+                            true,
+                            (acc, filter) -> {
+                              if (!acc) {
+                                return false;
                               }
-                            }),
-                (flux1, flux2) -> {
-                  throw new RuntimeException("Beware, here there be dragons ;)");
+
+                              val filterToTest =
+                                  applyFilter(
+                                      nodeProperties.getFunctionLanguage(), filter.getExpression());
+
+                              if (filterToTest.test(tx)) {
+                                logFilterMessage("Filter passed", tx, filter);
+                                return true;
+                              } else {
+                                failedFilter.set(filter);
+                                return false;
+                              }
+                            },
+                            (filterTupleOne, filterTupleTwo) -> {
+                              throw new RuntimeException(
+                                  "Beware, here there be dragons ... in the form of reducer combinators somehow being called on a non-parallel stream reduce ...");
+                            }))
+            .doOnDiscard(
+                Transaction.class,
+                (tx) -> {
+                  if (failedFilter.get().getReject()) {
+                    logFilterMessage("Filter failed (rejecting)", tx, failedFilter.get());
+                    tx.reject();
+                  } else {
+                    logFilterMessage("Filter failed (no ack)", tx, failedFilter.get());
+                  }
                 });
   }
 
@@ -65,7 +85,7 @@ public class Node {
             .doOnNext(tx -> log.info("Activation Result: {}", tx.get()));
   }
 
-  private static Predicate<Transaction<GraphEvent>> filter(
+  private static Predicate<Transaction<GraphEvent>> applyFilter(
       GraphFunctionLanguage language, String expression) {
     return tx -> evaluateBooleanExpression(language, expression, toMap(tx.get().toString()));
   }
@@ -99,9 +119,9 @@ public class Node {
   private static void logFilterMessage(
       String preText, Transaction tx, NodeProperties.Filter filter) {
     log.info(
-        "{} for value: {}, with the following expression: {}",
+        "{} with the following expression: \"{}\" for value: {}",
         preText,
-        tx.get(),
-        filter.getExpression());
+        filter.getExpression(),
+        tx.get());
   }
 }
