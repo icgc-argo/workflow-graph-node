@@ -36,22 +36,21 @@ public class Node {
                             true,
                             (acc, filter) -> {
                               if (!acc) {
+                                // One filter fail == Flux.filter(false)
                                 return false;
-                              }
-
-                              val filterToTest =
-                                  applyFilter(
-                                      nodeProperties.getFunctionLanguage(), filter.getExpression());
-
-                              if (filterToTest.test(tx)) {
+                              } else if (evaluateFilter(
+                                  tx,
+                                  nodeProperties.getFunctionLanguage(),
+                                  filter.getExpression())) {
                                 logFilterMessage("Filter passed", tx, filter);
                                 return true;
                               } else {
+                                // update the failed filter so it can be handled in doOnDiscard
                                 failedFilter.set(filter);
                                 return false;
                               }
                             },
-                            (filterTupleOne, filterTupleTwo) -> {
+                            (filterA, filterB) -> {
                               throw new RuntimeException(
                                   "Beware, here there be dragons ... in the form of reducer combinators somehow being called on a non-parallel stream reduce ...");
                             }))
@@ -65,6 +64,11 @@ public class Node {
                     logFilterMessage("Filter failed (no ack)", tx, failedFilter.get());
                   }
                 });
+  }
+
+  private static boolean evaluateFilter(
+      Transaction<GraphEvent> tx, GraphFunctionLanguage language, String expression) {
+    return evaluateBooleanExpression(language, expression, toMap(tx.get().toString()));
   }
 
   public static Function<Flux<Transaction<GraphEvent>>, Flux<Transaction<Map<String, Object>>>>
@@ -83,11 +87,6 @@ public class Node {
             .map(activationFunction(nodeProperties))
             .onErrorContinue(Errors.handle())
             .doOnNext(tx -> log.info("Activation Result: {}", tx.get()));
-  }
-
-  private static Predicate<Transaction<GraphEvent>> applyFilter(
-      GraphFunctionLanguage language, String expression) {
-    return tx -> evaluateBooleanExpression(language, expression, toMap(tx.get().toString()));
   }
 
   private static Function<Transaction<GraphEvent>, Mono<Transaction<Map<String, Object>>>> gqlQuery(
