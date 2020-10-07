@@ -6,6 +6,7 @@ import org.icgc_argo.workflow_graph_lib.polyglot.enums.GraphFunctionLanguage;
 import org.icgc_argo.workflow_graph_lib.schema.GraphEvent;
 import org.icgc_argo.workflow_graph_lib.workflow.client.RdpcClient;
 import org.icgc_argo.workflowgraphnode.config.NodeProperties;
+import org.springframework.core.ParameterizedTypeReference;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -15,43 +16,35 @@ import java.util.function.Predicate;
 
 import static org.icgc_argo.workflow_graph_lib.polyglot.Polyglot.evaluateBooleanExpression;
 import static org.icgc_argo.workflow_graph_lib.polyglot.Polyglot.runMainFunctionWithData;
-import static org.icgc_argo.workflow_graph_lib.utils.JacksonUtils.convertValue;
+import static org.icgc_argo.workflow_graph_lib.utils.JacksonUtils.toMap;
 
 @Slf4j
 public class Node {
 
   public static Function<Flux<Transaction<GraphEvent>>, Flux<Transaction<GraphEvent>>>
-      createFilterApplier(NodeProperties nodeProperties) {
-    return (input) -> {
-      nodeProperties
-          .getFilters()
-          .forEach(
-              filter -> {
-                input.transform(
-                    Node.createFilterTransformer(nodeProperties.getFunctionLanguage(), filter));
-              });
-
-      return input;
-    };
-  }
-
-  public static Function<Flux<Transaction<GraphEvent>>, Flux<Transaction<GraphEvent>>>
-      createFilterTransformer(GraphFunctionLanguage language, NodeProperties.Filter filter) {
-    return (input) ->
-        input
-            .filter(filter(language, filter.getExpression()))
-            .onErrorContinue(Errors.handle())
-            .doOnDiscard(
-                Transaction.class,
-                tx -> {
-                  if (filter.getReject()) {
-                    logFilterMessage("Filter failed (rejecting)", tx, filter);
-                    tx.reject();
-                  } else {
-                    logFilterMessage("Filter failed (no ack)", tx, filter);
-                  }
-                })
-            .doOnNext(tx -> logFilterMessage("Filter passed", tx, filter));
+      createFilterTransformer(NodeProperties nodeProperties) {
+    return input ->
+        nodeProperties.getFilters().stream()
+            .reduce(
+                input,
+                (flux, filter) ->
+                    flux.filter(
+                            filter(nodeProperties.getFunctionLanguage(), filter.getExpression()))
+                        .onErrorContinue(Errors.handle())
+                        .doOnNext(tx -> logFilterMessage("Filter passed", tx, filter))
+                        .doOnDiscard(
+                            Transaction.class,
+                            (tx) -> {
+                              if (filter.getReject()) {
+                                logFilterMessage("Filter failed (rejecting)", tx, filter);
+                                tx.reject();
+                              } else {
+                                logFilterMessage("Filter failed (no ack)", tx, filter);
+                              }
+                            }),
+                (flux1, flux2) -> {
+                  throw new RuntimeException("Beware, here there be dragons ;)");
+                });
   }
 
   public static Function<Flux<Transaction<GraphEvent>>, Flux<Transaction<Map<String, Object>>>>
@@ -74,7 +67,7 @@ public class Node {
 
   private static Predicate<Transaction<GraphEvent>> filter(
       GraphFunctionLanguage language, String expression) {
-    return tx -> evaluateBooleanExpression(language, expression, convertValue(tx.get(), Map.class));
+    return tx -> evaluateBooleanExpression(language, expression, toMap(tx.get().toString()));
   }
 
   private static Function<Transaction<GraphEvent>, Mono<Transaction<Map<String, Object>>>> gqlQuery(

@@ -45,7 +45,8 @@ public class NodeConfiguration {
   private final String schemaFullName;
 
   @Getter(lazy = true)
-  private final Function<Flux<Transaction<GraphEvent>>, Flux<Transaction<GraphEvent>>> filter
+  private final Function<Flux<Transaction<GraphEvent>>, Flux<Transaction<GraphEvent>>>
+      filterTransformer = Node.createFilterTransformer(nodeProperties);
 
   @Getter(lazy = true)
   private final Function<Flux<Transaction<GraphEvent>>, Flux<Transaction<Map<String, Object>>>>
@@ -154,31 +155,13 @@ public class NodeConfiguration {
                                 input.getProperties().getQueue(), GraphEvent.class)
                             .receive())
                 .collect(Collectors.toList()))
-        .transform(this::applyFilters)
+        .transform(getFilterTransformer())
         .transform(getGqlQueryTransformer())
         .transform(getActivationFunctionTransformer())
         .handle(verifyParamsWithSchema()) // Verify output of act-fn matches wf param schema
         .onErrorContinue(Errors.handle())
         .transform(getInputToRunRequestHandler())
         .doOnNext(tx -> log.info("Run request created: {}", tx.get()));
-  }
-
-  /**
-   * Sequentially applies all user defined (node config) filters onto the input Flux
-   *
-   * @param input Flux to apply filters on
-   * @return returns a Flux with filter processing applied
-   */
-  private Flux<Transaction<GraphEvent>> applyFilters(Flux<Transaction<GraphEvent>> input) {
-    nodeProperties
-        .getFilters()
-        .forEach(
-            filter -> {
-              input.transform(
-                  Node.createFilterTransformer(nodeProperties.getFunctionLanguage(), filter));
-            });
-
-    return input;
   }
 
   /**

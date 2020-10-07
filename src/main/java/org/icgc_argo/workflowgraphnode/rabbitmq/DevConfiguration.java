@@ -7,6 +7,7 @@ import java.util.List;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import org.icgc_argo.workflow_graph_lib.schema.AnalysisFile;
 import org.icgc_argo.workflow_graph_lib.schema.GraphEvent;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -55,10 +56,10 @@ public class DevConfiguration {
             analysisType,
             studyId,
             experimentalStrategy,
-            Collections.emptyList(),
-            Collections.emptyList());
+            List.of("DO123"),
+            List.of(new AnalysisFile("SNV")));
 
-    val demoStream = Flux.fromIterable(List.of(demoEvent));
+    val demoStream =  Flux.fromIterable(List.of(demoEvent));
 
     return rabbit
         .declareTopology(
