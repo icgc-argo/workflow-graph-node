@@ -9,6 +9,7 @@ import com.pivotal.rabbitmq.stream.Transaction;
 import java.time.Duration;
 import java.util.Map;
 import java.util.function.BiConsumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
@@ -18,9 +19,11 @@ import org.icgc_argo.workflow_graph_lib.exceptions.DeadLetterQueueableException;
 import org.icgc_argo.workflow_graph_lib.schema.GraphEvent;
 import org.icgc_argo.workflow_graph_lib.workflow.client.RdpcClient;
 import org.icgc_argo.workflow_graph_lib.workflow.model.RunRequest;
+import org.icgc_argo.workflow_graph_lib.workflow.model.WorkflowEngineParams;
 import org.icgc_argo.workflowgraphnode.components.Errors;
 import org.icgc_argo.workflowgraphnode.components.Node;
 import org.icgc_argo.workflowgraphnode.components.Workflows;
+import org.icgc_argo.workflowgraphnode.components.exceptions.WorkflowParamsFunctionException;
 import org.icgc_argo.workflowgraphnode.config.AppConfig;
 import org.icgc_argo.workflowgraphnode.config.NodeProperties;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,7 +41,6 @@ public class NodeConfiguration {
   private final ReactiveRabbit reactiveRabbit;
   private final TopologyConfiguration topologyConfig;
   private final NodeProperties nodeProperties;
-  private final Node node;
   private final Source<Map<String, Object>> directInputSource;
   private final String schemaFullName;
 
@@ -49,14 +51,12 @@ public class NodeConfiguration {
       @NonNull ReactiveRabbit reactiveRabbit,
       @NonNull TopologyConfiguration topologyConfig,
       @NonNull AppConfig appConfig,
-      @NonNull Node node,
       @NonNull Source<Map<String, Object>> directInputSource) {
     this.rdpcClient = rdpcClient;
     this.rabbit = rabbit;
     this.reactiveRabbit = reactiveRabbit;
     this.topologyConfig = topologyConfig;
     this.nodeProperties = appConfig.getNodeProperties();
-    this.node = node;
     this.directInputSource = directInputSource;
     this.schemaFullName =
         format(
@@ -82,9 +82,11 @@ public class NodeConfiguration {
   }
 
   public Disposable inputToRunning() {
+    val queuedInputStreams = queuedInputStream().transform(this::processQueuedInputStreams);
+
     // TODO: error handling and retry
     Flux<Transaction<String>> launchWorkflowStream =
-        Flux.merge(directInputStream(), queuedInputStream())
+        Flux.merge(directInputStream(), queuedInputStreams)
             .doOnNext(item -> log.info("Attempting to run workflow with: {}", item.get()))
             // flatMap needs a function that returns a Publisher that it then
             // resolves async by subscribing to it (ex. mono)
@@ -143,60 +145,57 @@ public class NodeConfiguration {
         .source()
         .handle(verifyParamsWithSchema()) // verify manually provided input matches schema
         .onErrorContinue(Errors.handle())
-        .handle(handleInputToRunRequest())
-        .onErrorContinue(Errors.handle())
+        .transform(this::handleInputToRunRequest)
         .doOnNext(tx -> log.info("Run request created: {}", tx.get()));
   }
 
-  private Flux<Transaction<RunRequest>> queuedInputStream() {
+  private Flux<Transaction<GraphEvent>> queuedInputStream() {
     // declare and merge all input queues provided in config
-    val inputStreams =
-        Flux.merge(
-            topologyConfig
-                .inputPropertiesAndTopologies()
-                .map(
-                    input ->
-                        rabbit
-                            .declareTopology(input.getTopologyBuilder())
-                            .createTransactionalConsumerStream(
-                                input.getProperties().getQueue(), GraphEvent.class)
-                            .receive())
-                .collect(Collectors.toList()));
+    return Flux.merge(
+        topologyConfig
+            .inputPropertiesAndTopologies()
+            .map(
+                input ->
+                    rabbit
+                        .declareTopology(input.getTopologyBuilder())
+                        .createTransactionalConsumerStream(
+                            input.getProperties().getQueue(), GraphEvent.class)
+                        .receive())
+            .collect(Collectors.toList()));
+  }
 
+  private Flux<Transaction<RunRequest>> processQueuedInputStreams(
+      Flux<Transaction<GraphEvent>> inputStreams) {
+    // declare and merge all input queues provided in config
     // Apply user filters
-    for (NodeProperties.Filter filter : nodeProperties.getFilters()) {
-      inputStreams
-          .filter(node.filter(filter.getExpression()))
-          .onErrorContinue(Errors.handle())
-          .doOnDiscard(
-              Transaction.class,
-              tx -> {
-                if (filter.getReject()) {
-                  logFilterMessage("Filter failed (rejecting)", tx, filter);
-                  tx.reject();
-                } else {
-                  logFilterMessage("Filter failed (no ack)", tx, filter);
-                }
-              })
-          .doOnNext(tx -> logFilterMessage("Filter passed", tx, filter));
-    }
-
     return inputStreams
-        .flatMap(node.gqlQuery())
-        .doOnNext(tx -> log.info("GQL Response: {}", tx.get()))
-        .map(node.activationFunction())
-        .onErrorContinue(Errors.handle())
+        .transform(this::applyFilters)
+        .transform(Node.createGqlQueryTransformer(rdpcClient, nodeProperties.getGqlQueryString()))
+        .transform(Node.createActivationFunctionTransformer(nodeProperties))
         .handle(verifyParamsWithSchema()) // Verify output of act-fn matches wf param schema
         .onErrorContinue(Errors.handle())
-        .doOnNext(tx -> log.info("Activation Result: {}", tx.get()))
-        .handle(handleInputToRunRequest())
-        .onErrorContinue(Errors.handle())
+        .transform(this::handleInputToRunRequest)
         .doOnNext(tx -> log.info("Run request created: {}", tx.get()));
   }
 
-  private BiConsumer<Transaction<Map<String, Object>>, SynchronousSink<Transaction<RunRequest>>>
-      handleInputToRunRequest() {
-    return (tx, sink) -> sink.next(tx.map(node.inputToRunRequest().apply(tx.get())));
+  private Flux<Transaction<GraphEvent>> applyFilters(Flux<Transaction<GraphEvent>> input) {
+    nodeProperties
+        .getFilters()
+        .forEach(
+            filter -> {
+              input.transform(
+                  Node.createFilterTransformer(nodeProperties.getFunctionLanguage(), filter));
+            });
+
+    return input;
+  }
+
+  private Flux<Transaction<RunRequest>> handleInputToRunRequest(
+      Flux<Transaction<Map<String, Object>>> input) {
+    return input
+        .<Transaction<RunRequest>>handle(
+            (tx, sink) -> sink.next(tx.map(inputToRunRequest().apply(tx.get()))))
+        .onErrorContinue(Errors.handle());
   }
 
   /**
@@ -222,11 +221,21 @@ public class NodeConfiguration {
     };
   }
 
-  private void logFilterMessage(String preText, Transaction tx, NodeProperties.Filter filter) {
-    log.info(
-        "{} for value: {}, with the following expression: {}",
-        preText,
-        tx.get(),
-        filter.getExpression());
+  public Function<Map<String, Object>, RunRequest> inputToRunRequest() {
+    return workflowParamsResponse -> {
+      try {
+        return RunRequest.builder()
+            .workflowUrl(nodeProperties.getWorkflow().getUrl())
+            // TODO: params will be Generic record with schema provided to node
+            .workflowParams(workflowParamsResponse)
+            .workflowEngineParams( // TODO: going to require more engine params ...
+                WorkflowEngineParams.builder()
+                    .revision(nodeProperties.getWorkflow().getRevision())
+                    .build())
+            .build();
+      } catch (Throwable e) {
+        throw new WorkflowParamsFunctionException(e.getLocalizedMessage());
+      }
+    };
   }
 }
