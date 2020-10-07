@@ -11,6 +11,8 @@ import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+
+import lombok.Getter;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
@@ -19,18 +21,16 @@ import org.icgc_argo.workflow_graph_lib.exceptions.DeadLetterQueueableException;
 import org.icgc_argo.workflow_graph_lib.schema.GraphEvent;
 import org.icgc_argo.workflow_graph_lib.workflow.client.RdpcClient;
 import org.icgc_argo.workflow_graph_lib.workflow.model.RunRequest;
-import org.icgc_argo.workflow_graph_lib.workflow.model.WorkflowEngineParams;
 import org.icgc_argo.workflowgraphnode.components.Errors;
+import org.icgc_argo.workflowgraphnode.components.Input;
 import org.icgc_argo.workflowgraphnode.components.Node;
 import org.icgc_argo.workflowgraphnode.components.Workflows;
-import org.icgc_argo.workflowgraphnode.components.exceptions.WorkflowParamsFunctionException;
 import org.icgc_argo.workflowgraphnode.config.AppConfig;
 import org.icgc_argo.workflowgraphnode.config.NodeProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 import reactor.core.publisher.SynchronousSink;
 
 @Slf4j
@@ -43,6 +43,23 @@ public class NodeConfiguration {
   private final NodeProperties nodeProperties;
   private final Source<Map<String, Object>> directInputSource;
   private final String schemaFullName;
+
+  @Getter(lazy = true)
+  private final Function<Flux<Transaction<GraphEvent>>, Flux<Transaction<GraphEvent>>> filter
+
+  @Getter(lazy = true)
+  private final Function<Flux<Transaction<GraphEvent>>, Flux<Transaction<Map<String, Object>>>>
+      gqlQueryTransformer =
+          Node.createGqlQueryTransformer(rdpcClient, nodeProperties.getGqlQueryString());
+
+  @Getter(lazy = true)
+  private final Function<
+          Flux<Transaction<Map<String, Object>>>, Flux<Transaction<Map<String, Object>>>>
+      activationFunctionTransformer = Node.createActivationFunctionTransformer(nodeProperties);
+
+  @Getter(lazy = true)
+  private final Function<Flux<Transaction<Map<String, Object>>>, Flux<Transaction<RunRequest>>>
+      inputToRunRequestHandler = Input.createInputToRunRequestHandler(nodeProperties.getWorkflow());
 
   @Autowired
   public NodeConfiguration(
@@ -82,20 +99,6 @@ public class NodeConfiguration {
   }
 
   public Disposable inputToRunning() {
-    val queuedInputStreams = queuedInputStream().transform(this::processQueuedInputStreams);
-
-    // TODO: error handling and retry
-    Flux<Transaction<String>> launchWorkflowStream =
-        Flux.merge(directInputStream(), queuedInputStreams)
-            .doOnNext(item -> log.info("Attempting to run workflow with: {}", item.get()))
-            // flatMap needs a function that returns a Publisher that it then
-            // resolves async by subscribing to it (ex. mono)
-            .flatMap(
-                tx ->
-                    rdpcClient
-                        .startRun(tx.get())
-                        .flatMap(response -> Mono.fromCallable(() -> tx.map(response))));
-
     return rabbit
         .declareTopology(topologyConfig.runningTopology())
         .createTransactionalProducerStream(String.class)
@@ -105,7 +108,7 @@ public class NodeConfiguration {
         .whenNackByBroker()
         .alwaysRetry(Duration.ofSeconds(5))
         .then()
-        .send(launchWorkflowStream)
+        .send(mergedInputStreams())
         .doOnNext(tx -> log.info("Run request confirmed by RDPC, runId: {}", tx.get()))
         .subscribe(Transaction::commit);
   }
@@ -119,25 +122,14 @@ public class NodeConfiguration {
         .doOnNext(r -> log.debug("Checking status of: {}", r.get()))
         .handle(Workflows.handleRunStatus(rdpcClient))
         .onErrorContinue(Errors.handle())
-        .flatMap(
-            tx ->
-                rdpcClient
-                    .createGraphEventsForRun(tx.get())
-                    .onErrorContinue(Errors.handle())
-                    .flatMapIterable(
-                        response ->
-                            response.stream()
-                                .map(tx::spawn)
-                                .collect(
-                                    Collectors.collectingAndThen(
-                                        Collectors.toList(),
-                                        list -> {
-                                          // commit the parent transaction after spawning children
-                                          // (won't be fully committed until each child is
-                                          // committed once it is sent to the complete exchange)
-                                          tx.commit();
-                                          return list;
-                                        }))));
+        .flatMap(Workflows.runAnalysesToGraphEvent(rdpcClient));
+  }
+
+  private Flux<Transaction<String>> mergedInputStreams() {
+    return Flux.merge(directInputStream(), queuedInputStream())
+        .doOnNext(item -> log.info("Attempting to run workflow with: {}", item.get()))
+        .flatMap(Workflows.startRuns(rdpcClient))
+        .onErrorContinue(Errors.handle());
   }
 
   private Flux<Transaction<RunRequest>> directInputStream() {
@@ -145,39 +137,38 @@ public class NodeConfiguration {
         .source()
         .handle(verifyParamsWithSchema()) // verify manually provided input matches schema
         .onErrorContinue(Errors.handle())
-        .transform(this::handleInputToRunRequest)
+        .transform(getInputToRunRequestHandler())
         .doOnNext(tx -> log.info("Run request created: {}", tx.get()));
   }
 
-  private Flux<Transaction<GraphEvent>> queuedInputStream() {
+  private Flux<Transaction<RunRequest>> queuedInputStream() {
     // declare and merge all input queues provided in config
     return Flux.merge(
-        topologyConfig
-            .inputPropertiesAndTopologies()
-            .map(
-                input ->
-                    rabbit
-                        .declareTopology(input.getTopologyBuilder())
-                        .createTransactionalConsumerStream(
-                            input.getProperties().getQueue(), GraphEvent.class)
-                        .receive())
-            .collect(Collectors.toList()));
-  }
-
-  private Flux<Transaction<RunRequest>> processQueuedInputStreams(
-      Flux<Transaction<GraphEvent>> inputStreams) {
-    // declare and merge all input queues provided in config
-    // Apply user filters
-    return inputStreams
+            topologyConfig
+                .inputPropertiesAndTopologies()
+                .map(
+                    input ->
+                        rabbit
+                            .declareTopology(input.getTopologyBuilder())
+                            .createTransactionalConsumerStream(
+                                input.getProperties().getQueue(), GraphEvent.class)
+                            .receive())
+                .collect(Collectors.toList()))
         .transform(this::applyFilters)
-        .transform(Node.createGqlQueryTransformer(rdpcClient, nodeProperties.getGqlQueryString()))
-        .transform(Node.createActivationFunctionTransformer(nodeProperties))
+        .transform(getGqlQueryTransformer())
+        .transform(getActivationFunctionTransformer())
         .handle(verifyParamsWithSchema()) // Verify output of act-fn matches wf param schema
         .onErrorContinue(Errors.handle())
-        .transform(this::handleInputToRunRequest)
+        .transform(getInputToRunRequestHandler())
         .doOnNext(tx -> log.info("Run request created: {}", tx.get()));
   }
 
+  /**
+   * Sequentially applies all user defined (node config) filters onto the input Flux
+   *
+   * @param input Flux to apply filters on
+   * @return returns a Flux with filter processing applied
+   */
   private Flux<Transaction<GraphEvent>> applyFilters(Flux<Transaction<GraphEvent>> input) {
     nodeProperties
         .getFilters()
@@ -188,14 +179,6 @@ public class NodeConfiguration {
             });
 
     return input;
-  }
-
-  private Flux<Transaction<RunRequest>> handleInputToRunRequest(
-      Flux<Transaction<Map<String, Object>>> input) {
-    return input
-        .<Transaction<RunRequest>>handle(
-            (tx, sink) -> sink.next(tx.map(inputToRunRequest().apply(tx.get()))))
-        .onErrorContinue(Errors.handle());
   }
 
   /**
@@ -213,28 +196,12 @@ public class NodeConfiguration {
       val newRecord = reactiveRabbit.schemaManager().newRecord(schemaFullName);
       try {
         tx.get().forEach(newRecord::put);
+        sink.next(tx);
       } catch (AvroRuntimeException e) {
         log.error("Provided input parameters do not match parameter schema specified by workflow");
         sink.error(new DeadLetterQueueableException(e));
-      }
-      sink.next(tx);
-    };
-  }
-
-  public Function<Map<String, Object>, RunRequest> inputToRunRequest() {
-    return workflowParamsResponse -> {
-      try {
-        return RunRequest.builder()
-            .workflowUrl(nodeProperties.getWorkflow().getUrl())
-            // TODO: params will be Generic record with schema provided to node
-            .workflowParams(workflowParamsResponse)
-            .workflowEngineParams( // TODO: going to require more engine params ...
-                WorkflowEngineParams.builder()
-                    .revision(nodeProperties.getWorkflow().getRevision())
-                    .build())
-            .build();
-      } catch (Throwable e) {
-        throw new WorkflowParamsFunctionException(e.getLocalizedMessage());
+      } catch (Exception e) {
+        sink.error(e);
       }
     };
   }

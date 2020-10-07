@@ -19,9 +19,25 @@ import static org.icgc_argo.workflow_graph_lib.utils.JacksonUtils.convertValue;
 
 @Slf4j
 public class Node {
+
+  public static Function<Flux<Transaction<GraphEvent>>, Flux<Transaction<GraphEvent>>>
+      createFilterApplier(NodeProperties nodeProperties) {
+    return (input) -> {
+      nodeProperties
+          .getFilters()
+          .forEach(
+              filter -> {
+                input.transform(
+                    Node.createFilterTransformer(nodeProperties.getFunctionLanguage(), filter));
+              });
+
+      return input;
+    };
+  }
+
   public static Function<Flux<Transaction<GraphEvent>>, Flux<Transaction<GraphEvent>>>
       createFilterTransformer(GraphFunctionLanguage language, NodeProperties.Filter filter) {
-    return (Flux<Transaction<GraphEvent>> input) ->
+    return (input) ->
         input
             .filter(filter(language, filter.getExpression()))
             .onErrorContinue(Errors.handle())
@@ -49,7 +65,7 @@ public class Node {
   public static Function<
           Flux<Transaction<Map<String, Object>>>, Flux<Transaction<Map<String, Object>>>>
       createActivationFunctionTransformer(NodeProperties nodeProperties) {
-    return (Flux<Transaction<Map<String, Object>>> input) ->
+    return (input) ->
         input
             .map(activationFunction(nodeProperties))
             .onErrorContinue(Errors.handle())
