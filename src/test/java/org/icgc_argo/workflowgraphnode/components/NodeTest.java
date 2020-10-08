@@ -18,8 +18,7 @@ import reactor.test.StepVerifier;
 import reactor.util.function.Tuples;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.util.Collections;
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
@@ -58,63 +57,46 @@ public class NodeTest {
 
     Flux<Transaction<GraphEvent>> source = Flux.fromIterable(input).transform(transformer);
 
-    // Fails on second filter due to bad analysisType
-    val testDiscardOne =
-        new EventFilterPair(input.get(1), Tuples.of(filterConfig.getFilters().get(1), false));
-
-    // Fails on first filter due to bad study
-    val testDiscardTwo =
-        new EventFilterPair(input.get(2), Tuples.of(filterConfig.getFilters().get(0), false));
-
-    // Both filters fail but we want to fail fast and ensure only the first is caught
-    val testDiscardThree =
-        new EventFilterPair(input.get(3), Tuples.of(filterConfig.getFilters().get(0), false));
-
     StepVerifier.create(source)
         .expectNextMatches(tx -> tx.get().getAnalysisType().equals("variantCall"))
         .expectComplete()
         .verifyThenAssertThat()
-        .hasDiscarded(testDiscardOne, testDiscardTwo, testDiscardThree);
+        .hasDiscardedElementsSatisfying(this::filterTransformerDiscardedTests);
   }
 
-  @Test
+  /**
+   * Helper method to ensure that the doOnDiscard hook is behaving as expected:
+   * 1. Should fail on the first filter
+   * 2. Should correctly reject/not-reject the transaction based on the filter that failed
+   * @param discarded the collection of discarded elements (order is maintained from input Flux)
+   */
   @SneakyThrows
-  void testDiscardFunction() {
-    val testEvent =
-        tm.newTransaction(
-            GraphEvent.newBuilder()
-                .setAnalysisId("test")
-                .setAnalysisState("COMPLETE")
-                .setAnalysisType("badAnalysisTypeAndStudy")
-                .setStudyId("BROKEN")
-                .setExperimentalStrategy("WGS")
-                .setDonorIds(Collections.emptyList())
-                .setFiles(Collections.emptyList())
-                .build());
-
-    val nonRejectFilterTest =
-        new EventFilterPair(testEvent, Tuples.of(filterConfig.getFilters().get(0), false));
-
-    val rejectFilterTest =
-        new EventFilterPair(testEvent, Tuples.of(filterConfig.getFilters().get(1), false));
-
-    // really want to make sure the transaction is being handled correctly
-    Method doOnFilterFail = Node.class.getDeclaredMethod("doOnFilterFail", EventFilterPair.class);
-    doOnFilterFail.setAccessible(true);
-
+  private void filterTransformerDiscardedTests(Collection<Object> discarded) {
+    // also want to make sure the transaction is being handled correctly
     Field receivedRejectedField = Transactional.class.getDeclaredField("receivedRejected");
     receivedRejectedField.setAccessible(true);
 
-    // Run transaction through non-rejecting filter
-    doOnFilterFail.invoke(null, nonRejectFilterTest);
-    val isNonRejectedTestRejected =
-        (AtomicBoolean) receivedRejectedField.get(nonRejectFilterTest.getTransaction());
-    assertThat(isNonRejectedTestRejected).isFalse();
+    // test that filters have been properly handled in doOnDiscard hook
+    val discardedIter = discarded.toArray();
+    val testDiscardOne = (EventFilterPair) discardedIter[0];
+    val testDiscardTwo = (EventFilterPair) discardedIter[1];
+    val testDiscardThree = (EventFilterPair) discardedIter[2];
 
-    // Run transaction through rejecting filter
-    doOnFilterFail.invoke(null, rejectFilterTest);
-    val isRejectedTestRejected =
-        (AtomicBoolean) receivedRejectedField.get(rejectFilterTest.getTransaction());
-    assertThat(isRejectedTestRejected);
+    // Fails on second filter due to bad analysisType (should reject
+    assertThat(testDiscardOne.getFilterAndResult())
+        .isEqualTo(Tuples.of(filterConfig.getFilters().get(1), false));
+    assertThat((AtomicBoolean) receivedRejectedField.get(testDiscardOne.getTransaction()));
+
+    // Fails on first filter due to bad study
+    assertThat(testDiscardTwo.getFilterAndResult())
+        .isEqualTo(Tuples.of(filterConfig.getFilters().get(0), false));
+    assertThat((AtomicBoolean) receivedRejectedField.get(testDiscardTwo.getTransaction()))
+        .isFalse();
+
+    // Both filters fail but we want to fail fast and ensure only the first is caught
+    assertThat(testDiscardThree.getFilterAndResult())
+        .isEqualTo(Tuples.of(filterConfig.getFilters().get(0), false));
+    assertThat((AtomicBoolean) receivedRejectedField.get(testDiscardThree.getTransaction()))
+        .isFalse();
   }
 }
