@@ -1,19 +1,20 @@
 package org.icgc_argo.workflowgraphnode.components;
 
 import com.pivotal.rabbitmq.stream.Transaction;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
-import lombok.val;
 import org.icgc_argo.workflow_graph_lib.polyglot.enums.GraphFunctionLanguage;
 import org.icgc_argo.workflow_graph_lib.schema.GraphEvent;
 import org.icgc_argo.workflow_graph_lib.workflow.client.RdpcClient;
 import org.icgc_argo.workflowgraphnode.config.NodeProperties;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.util.function.Tuple2;
+import reactor.util.function.Tuples;
 
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
-import java.util.function.Predicate;
 
 import static org.icgc_argo.workflow_graph_lib.polyglot.Polyglot.evaluateBooleanExpression;
 import static org.icgc_argo.workflow_graph_lib.polyglot.Polyglot.runMainFunctionWithData;
@@ -23,47 +24,52 @@ import static org.icgc_argo.workflow_graph_lib.utils.JacksonUtils.toMap;
 public class Node {
   public static Function<Flux<Transaction<GraphEvent>>, Flux<Transaction<GraphEvent>>>
       createFilterTransformer(NodeProperties nodeProperties) {
-
-    AtomicReference<NodeProperties.Filter> failedFilter =
-        new AtomicReference<>(new NodeProperties.Filter());
-
     return input ->
         input
-            .filter(
+            .map(
                 tx ->
-                    nodeProperties.getFilters().stream()
-                        .reduce(
-                            true,
-                            (acc, filter) -> {
-                              if (!acc) {
-                                // One filter fail == Flux.filter(false)
-                                return false;
-                              } else if (evaluateFilter(
-                                  tx,
-                                  nodeProperties.getFunctionLanguage(),
-                                  filter.getExpression())) {
-                                logFilterMessage("Filter passed", tx, filter);
-                                return true;
-                              } else {
-                                // update the failed filter so it can be handled in doOnDiscard
-                                failedFilter.set(filter);
-                                return false;
-                              }
-                            },
-                            (filterA, filterB) -> {
-                              throw new RuntimeException(
-                                  "Beware, here there be dragons ... in the form of reducer combinators somehow being called on a non-parallel stream reduce ...");
-                            }))
+                    new EventFilterPair(
+                        tx,
+                        nodeProperties.getFilters().stream()
+                            .reduce(
+                                Tuples.of(new NodeProperties.Filter(), true),
+                                (acc, filter) -> {
+                                  if (!acc.getT2()) {
+                                    // fail on first filter
+                                    return acc;
+                                  } else if (evaluateFilter(
+                                      tx,
+                                      nodeProperties.getFunctionLanguage(),
+                                      filter.getExpression())) {
+                                    logFilterMessage("Filter passed", tx, filter);
+                                    return acc;
+                                  } else {
+                                    // return the first filter that evaluated to false
+                                    return Tuples.of(filter, false);
+                                  }
+                                },
+                                (filterA, filterB) -> {
+                                  throw new RuntimeException(
+                                      "Beware, here there be dragons ... in the form of reducer combinators somehow being called on a non-parallel stream reduce ...");
+                                })))
+            .filter(eventFilterPair -> eventFilterPair.filterAndResult.getT2())
             .doOnDiscard(
-                Transaction.class,
-                (tx) -> {
-                  if (failedFilter.get().getReject()) {
-                    logFilterMessage("Filter failed (rejecting)", tx, failedFilter.get());
-                    tx.reject();
+                EventFilterPair.class,
+                (eventFilterPair) -> {
+                  if (eventFilterPair.filterAndResult.getT1().getReject()) {
+                    logFilterMessage(
+                        "Filter failed (rejecting)",
+                        eventFilterPair.getTransaction(),
+                        eventFilterPair.filterAndResult.getT1());
+                    eventFilterPair.getTransaction().reject();
                   } else {
-                    logFilterMessage("Filter failed (no ack)", tx, failedFilter.get());
+                    logFilterMessage(
+                        "Filter failed (no ack)",
+                        eventFilterPair.getTransaction(),
+                        eventFilterPair.filterAndResult.getT1());
                   }
-                });
+                })
+            .map(EventFilterPair::getTransaction);
   }
 
   private static boolean evaluateFilter(
@@ -122,5 +128,12 @@ public class Node {
         preText,
         filter.getExpression(),
         tx.get());
+  }
+
+  @Data
+  @AllArgsConstructor
+  private static class EventFilterPair {
+    private Transaction<GraphEvent> transaction;
+    private Tuple2<NodeProperties.Filter, Boolean> filterAndResult;
   }
 }
