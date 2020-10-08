@@ -14,6 +14,7 @@ import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
 
 import java.util.Map;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import static org.icgc_argo.workflow_graph_lib.polyglot.Polyglot.evaluateBooleanExpression;
@@ -33,48 +34,14 @@ public class Node {
                         nodeProperties.getFilters().stream()
                             .reduce(
                                 Tuples.of(new NodeProperties.Filter(), true),
-                                (acc, filter) -> {
-                                  if (!acc.getT2()) {
-                                    // fail on first filter
-                                    return acc;
-                                  } else if (evaluateFilter(
-                                      tx,
-                                      nodeProperties.getFunctionLanguage(),
-                                      filter.getExpression())) {
-                                    logFilterMessage("Filter passed", tx, filter);
-                                    return acc;
-                                  } else {
-                                    // return the first filter that evaluated to false
-                                    return Tuples.of(filter, false);
-                                  }
-                                },
+                                filterReducer(nodeProperties, tx),
                                 (filterA, filterB) -> {
                                   throw new RuntimeException(
                                       "Beware, here there be dragons ... in the form of reducer combinators somehow being called on a non-parallel stream reduce ...");
                                 })))
             .filter(eventFilterPair -> eventFilterPair.filterAndResult.getT2())
-            .doOnDiscard(
-                EventFilterPair.class,
-                (eventFilterPair) -> {
-                  if (eventFilterPair.filterAndResult.getT1().getReject()) {
-                    logFilterMessage(
-                        "Filter failed (rejecting)",
-                        eventFilterPair.getTransaction(),
-                        eventFilterPair.filterAndResult.getT1());
-                    eventFilterPair.getTransaction().reject();
-                  } else {
-                    logFilterMessage(
-                        "Filter failed (no ack)",
-                        eventFilterPair.getTransaction(),
-                        eventFilterPair.filterAndResult.getT1());
-                  }
-                })
+            .doOnDiscard(EventFilterPair.class, Node::doOnFilterFail)
             .map(EventFilterPair::getTransaction);
-  }
-
-  private static boolean evaluateFilter(
-      Transaction<GraphEvent> tx, GraphFunctionLanguage language, String expression) {
-    return evaluateBooleanExpression(language, expression, toMap(tx.get().toString()));
   }
 
   public static Function<Flux<Transaction<GraphEvent>>, Flux<Transaction<Map<String, Object>>>>
@@ -93,6 +60,11 @@ public class Node {
             .map(activationFunction(nodeProperties))
             .onErrorContinue(Errors.handle())
             .doOnNext(tx -> log.info("Activation Result: {}", tx.get()));
+  }
+
+  private static boolean evaluateFilter(
+      Transaction<GraphEvent> tx, GraphFunctionLanguage language, String expression) {
+    return evaluateBooleanExpression(language, expression, toMap(tx.get().toString()));
   }
 
   private static Function<Transaction<GraphEvent>, Mono<Transaction<Map<String, Object>>>> gqlQuery(
@@ -121,8 +93,42 @@ public class Node {
                 tx.get()));
   }
 
+  private static BiFunction<
+          Tuple2<NodeProperties.Filter, Boolean>,
+          NodeProperties.Filter,
+          Tuple2<NodeProperties.Filter, Boolean>>
+      filterReducer(NodeProperties nodeProperties, Transaction<GraphEvent> tx) {
+    return (acc, filter) -> {
+      if (!acc.getT2()) {
+        // fail on first filter
+        return acc;
+      } else if (evaluateFilter(tx, nodeProperties.getFunctionLanguage(), filter.getExpression())) {
+        logFilterMessage("Filter passed", tx, filter);
+        return acc;
+      } else {
+        // return the first filter that evaluated to false
+        return Tuples.of(filter, false);
+      }
+    };
+  }
+
+  private static void doOnFilterFail(EventFilterPair eventFilterPair) {
+    if (eventFilterPair.filterAndResult.getT1().getReject()) {
+      logFilterMessage(
+          "Filter failed (rejecting)",
+          eventFilterPair.getTransaction(),
+          eventFilterPair.filterAndResult.getT1());
+      eventFilterPair.getTransaction().reject();
+    } else {
+      logFilterMessage(
+          "Filter failed (no ack)",
+          eventFilterPair.getTransaction(),
+          eventFilterPair.filterAndResult.getT1());
+    }
+  }
+
   private static void logFilterMessage(
-      String preText, Transaction tx, NodeProperties.Filter filter) {
+      String preText, Transaction<GraphEvent> tx, NodeProperties.Filter filter) {
     log.info(
         "{} with the following expression: \"{}\" for value: {}",
         preText,
