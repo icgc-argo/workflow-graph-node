@@ -138,7 +138,7 @@ public class Node {
 
   @Data
   @AllArgsConstructor
-  private static class EventFilterPair {
+  public static class EventFilterPair {
     private Transaction<GraphEvent> transaction;
     private Tuple2<NodeProperties.Filter, Boolean> filterAndResult;
   }

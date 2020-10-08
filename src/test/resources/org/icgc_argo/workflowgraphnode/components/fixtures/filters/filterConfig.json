@@ -1,0 +1,13 @@
+{
+  "functionLanguage": "js",
+  "filters": [
+    {
+      "expression": "data.studyId === 'JAS-CA'",
+      "reject": false
+    },
+    {
+      "expression": "data.analysisType === 'variantCall'",
+      "reject": true
+    }
+  ]
+}

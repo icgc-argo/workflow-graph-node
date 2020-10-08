@@ -1,0 +1,30 @@
+[
+  {
+    "analysisId": "d31168d4-5e11-41ff-9168-d45e1151ff6d",
+    "analysisState": "COMPLETE",
+    "analysisType": "variantCall",
+    "studyId": "JAS-CA",
+    "experimentalStrategy": "WGS"
+  },
+  {
+    "analysisId": "d31168d4-5e11-41ff-9168-d45e1151ff6d",
+    "analysisState": "COMPLETE",
+    "analysisType": "badAnalysisType",
+    "studyId": "JAS-CA",
+    "experimentalStrategy": "WGS"
+  },
+  {
+    "analysisId": "d31168d4-5e11-41ff-9168-d45e1151ff6d",
+    "analysisState": "COMPLETE",
+    "analysisType": "variantCall",
+    "studyId": "BAD-STUDY",
+    "experimentalStrategy": "WGS"
+  },
+  {
+    "analysisId": "d31168d4-5e11-41ff-9168-d45e1151ff6d",
+    "analysisState": "COMPLETE",
+    "analysisType": "badAnalysisTypeAndStudy",
+    "studyId": "BROKEN",
+    "experimentalStrategy": "WGS"
+  }
+]
