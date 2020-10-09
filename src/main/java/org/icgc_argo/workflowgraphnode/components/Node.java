@@ -27,18 +27,7 @@ public class Node {
       createFilterTransformer(NodeProperties nodeProperties) {
     return input ->
         input
-            .map(
-                tx ->
-                    new EventFilterPair(
-                        tx,
-                        nodeProperties.getFilters().stream()
-                            .reduce(
-                                Tuples.of(new NodeProperties.Filter(), true),
-                                filterReducer(nodeProperties, tx),
-                                (filterA, filterB) -> {
-                                  throw new RuntimeException(
-                                      "Beware, here there be dragons ... in the form of reducer combinators somehow being called on a non-parallel stream reduce ...");
-                                })))
+            .map(mapToEventFilterPair(nodeProperties))
             .filter(eventFilterPair -> eventFilterPair.filterAndResult.getT2())
             .doOnDiscard(EventFilterPair.class, Node::doOnFilterFail)
             .map(EventFilterPair::getTransaction);
@@ -91,6 +80,21 @@ public class Node {
                 nodeProperties.getFunctionLanguage(),
                 nodeProperties.getActivationFunction(),
                 tx.get()));
+  }
+
+  private static Function<Transaction<GraphEvent>, EventFilterPair> mapToEventFilterPair(
+      NodeProperties nodeProperties) {
+    return tx ->
+        new EventFilterPair(
+            tx,
+            nodeProperties.getFilters().stream()
+                .reduce(
+                    Tuples.of(new NodeProperties.Filter(), true),
+                    filterReducer(nodeProperties, tx),
+                    (filterA, filterB) -> {
+                      throw new RuntimeException(
+                          "Beware, here there be dragons ... in the form of reducer combinators somehow being called on a non-parallel stream reduce ...");
+                    }));
   }
 
   private static BiFunction<
