@@ -9,10 +9,12 @@ import com.pivotal.rabbitmq.stream.Transactional;
 import lombok.SneakyThrows;
 import lombok.val;
 import org.icgc_argo.workflow_graph_lib.exceptions.DeadLetterQueueableException;
+import org.icgc_argo.workflow_graph_lib.exceptions.RequeueableException;
 import org.icgc_argo.workflow_graph_lib.schema.GraphEvent;
 import org.icgc_argo.workflow_graph_lib.workflow.client.RdpcClient;
 import org.icgc_argo.workflowgraphnode.components.Node.EventFilterPair;
 import org.icgc_argo.workflowgraphnode.config.NodeProperties;
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
@@ -27,6 +29,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -41,14 +44,24 @@ public class NodeTest {
   private final TransactionManager<GraphEvent, Transaction<GraphEvent>> tm =
       new TransactionManager<>("nodeTest");
 
+  private final Field receivedRejectedField;
+  private final Field receivedRequeuedField;
+
   // state
   private final NodeProperties config;
 
   @SneakyThrows
-  public NodeTest() {
+  public NodeTest() throws NoSuchFieldException {
     config =
         mapper.readValue(
             this.getClass().getResourceAsStream("fixtures/config.json"), NodeProperties.class);
+
+    // will want to make sure the transaction is being handled correctly throughout the tests
+    receivedRejectedField = Transactional.class.getDeclaredField("receivedRejected");
+    receivedRequeuedField = Transactional.class.getDeclaredField("receivedRequeued");
+
+    receivedRejectedField.setAccessible(true);
+    receivedRequeuedField.setAccessible(true);
   }
 
   @Test
@@ -69,43 +82,6 @@ public class NodeTest {
         .hasDiscardedElementsSatisfying(this::filterTransformerDiscardedTests);
   }
 
-  @Test
-  @SneakyThrows
-  void testGqlQueryTransformer() {
-    val input =
-        createGraphEventTransactionsFromStream(
-            this.getClass().getResourceAsStream("fixtures/gqlQuery/input.json"));
-
-    List<Map<String, Object>> results =
-        createMapListFromJsonFileStream(
-            this.getClass().getResourceAsStream("fixtures/gqlQuery/results.json"));
-
-    val rdpcClientMock = mock(RdpcClient.class);
-
-    // first input returns a result
-    when(rdpcClientMock.simpleQueryWithEvent(config.getGqlQueryString(), input.get(0).get()))
-        .thenReturn(Mono.just(results.get(0)));
-
-    // second input is a 404 (RDPC client throws DeadLetterQueueableException)
-    when(rdpcClientMock.simpleQueryWithEvent(config.getGqlQueryString(), input.get(1).get()))
-        .thenThrow(DeadLetterQueueableException.class);
-
-    val transformer = Node.createGqlQueryTransformer(rdpcClientMock, config.getGqlQueryString());
-
-    val source = Flux.fromIterable(input).transform(transformer);
-
-    StepVerifier.create(source)
-        .expectNextMatches(
-            tx ->
-                mapper
-                    .convertValue(tx.get(), JsonNode.class)
-                    .at("/data/analyses/0/analysisId")
-                    .asText()
-                    .equals("does-exist"))
-        .expectError(DeadLetterQueueableException.class)
-        .verify();
-  }
-
   /**
    * Helper method to ensure that the doOnDiscard hook is behaving as expected: 1. Should fail on
    * the first filter 2. Should correctly reject/not-reject the transaction based on the filter that
@@ -115,10 +91,6 @@ public class NodeTest {
    */
   @SneakyThrows
   private void filterTransformerDiscardedTests(Collection<Object> discarded) {
-    // also want to make sure the transaction is being handled correctly
-    Field receivedRejectedField = Transactional.class.getDeclaredField("receivedRejected");
-    receivedRejectedField.setAccessible(true);
-
     // test that filters have been properly handled in doOnDiscard hook
     val discardedIter = discarded.toArray();
     val testDiscardOne = (EventFilterPair) discardedIter[0];
@@ -141,6 +113,63 @@ public class NodeTest {
         .isEqualTo(Tuples.of(config.getFilters().get(0), false));
     assertThat((AtomicBoolean) receivedRejectedField.get(testDiscardThree.getTransaction()))
         .isFalse();
+  }
+
+  @Test
+  @SneakyThrows
+  void testGqlQueryTransformer() {
+    val input =
+        createGraphEventTransactionsFromStream(
+            this.getClass().getResourceAsStream("fixtures/gqlQuery/input.json"));
+
+    List<Map<String, Object>> results =
+        createMapListFromJsonFileStream(
+            this.getClass().getResourceAsStream("fixtures/gqlQuery/results.json"));
+
+    val rdpcClientMock = mock(RdpcClient.class);
+
+    // first input returns a result
+    // expectation: the result makes it throught flux
+    when(rdpcClientMock.simpleQueryWithEvent(config.getGqlQueryString(), input.get(0).get()))
+        .thenReturn(Mono.just(results.get(0)));
+
+    // second input returns a 400 (RDPC client throws DeadLetterQueueableException)
+    // expectation: Errors.handle() deals with error then rejects to DLQ
+    when(rdpcClientMock.simpleQueryWithEvent(config.getGqlQueryString(), input.get(1).get()))
+        .thenThrow(DeadLetterQueueableException.class);
+
+    // third input returns a 401 (RDPC client throws RequeueableException)
+    // expectation: Errors.handle() deals with error then requeues
+    when(rdpcClientMock.simpleQueryWithEvent(config.getGqlQueryString(), input.get(2).get()))
+            .thenThrow(RequeueableException.class);
+
+    val transformer = Node.createGqlQueryTransformer(rdpcClientMock, config.getGqlQueryString());
+
+    val source = Flux.fromIterable(input).transform(transformer);
+
+    StepVerifier.create(source)
+        .expectNextMatches(
+            tx ->
+                mapper
+                    .convertValue(tx.get(), JsonNode.class)
+                    .at("/data/analyses/0/analysisId")
+                    .asText()
+                    .equals("does-exist"))
+        .expectComplete()
+        .verifyThenAssertThat()
+        .hasNotDroppedElements()
+        .hasNotDroppedErrors()
+        .hasDiscardedElementsSatisfying(this::gqlQueryTransformerDiscardedTests);
+  }
+
+  @SneakyThrows
+  private void gqlQueryTransformerDiscardedTests(Collection<Object> discarded) {
+    val discardedIter = discarded.toArray();
+    // expecting DLQ on DeadLetterQueueableException
+    assertThat((AtomicBoolean) receivedRejectedField.get(discardedIter[0]));
+
+    // expecting requeue on RequeueableException
+    assertThat((AtomicBoolean) receivedRequeuedField.get(discardedIter[1]));
   }
 
   @SneakyThrows

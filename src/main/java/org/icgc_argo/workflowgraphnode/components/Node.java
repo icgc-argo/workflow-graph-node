@@ -30,7 +30,8 @@ public class Node {
             .map(mapToEventFilterPair(nodeProperties))
             .filter(eventFilterPair -> eventFilterPair.filterAndResult.getT2())
             .doOnDiscard(EventFilterPair.class, Node::doOnFilterFail)
-            .map(EventFilterPair::getTransaction);
+            .map(EventFilterPair::getTransaction)
+            .onErrorContinue(Errors.handle());
   }
 
   public static Function<Flux<Transaction<GraphEvent>>, Flux<Transaction<Map<String, Object>>>>
@@ -38,6 +39,7 @@ public class Node {
     return (input) ->
         input
             .flatMap(gqlQuery(client, query))
+            .onErrorContinue(Errors.handle())
             .doOnNext(tx -> log.info("GQL Response: {}", tx.get()));
   }
 
