@@ -3,14 +3,14 @@
     "analysisId": "d31168d4-5e11-41ff-9168-d45e1151ff6d",
     "analysisState": "COMPLETE",
     "analysisType": "variantCall",
-    "studyId": "JAS-CA",
+    "studyId": "GRAPH",
     "experimentalStrategy": "WGS"
   },
   {
     "analysisId": "d31168d4-5e11-41ff-9168-d45e1151ff6d",
     "analysisState": "COMPLETE",
     "analysisType": "badAnalysisType",
-    "studyId": "JAS-CA",
+    "studyId": "GRAPH",
     "experimentalStrategy": "WGS"
   },
   {

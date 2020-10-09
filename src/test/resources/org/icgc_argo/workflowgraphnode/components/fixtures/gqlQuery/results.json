@@ -1,0 +1,12 @@
+[
+  {
+    "data": {
+      "analyses": [
+        {
+          "analysisId": "does-exist",
+          "studyId": "GRAPH"
+        }
+      ]
+    }
+  }
+]

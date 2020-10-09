@@ -1,29 +1,37 @@
 package org.icgc_argo.workflowgraphnode.components;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pivotal.rabbitmq.stream.Transaction;
 import com.pivotal.rabbitmq.stream.TransactionManager;
 import com.pivotal.rabbitmq.stream.Transactional;
 import lombok.SneakyThrows;
 import lombok.val;
+import org.icgc_argo.workflow_graph_lib.exceptions.DeadLetterQueueableException;
 import org.icgc_argo.workflow_graph_lib.schema.GraphEvent;
+import org.icgc_argo.workflow_graph_lib.workflow.client.RdpcClient;
 import org.icgc_argo.workflowgraphnode.components.Node.EventFilterPair;
 import org.icgc_argo.workflowgraphnode.config.NodeProperties;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 import reactor.util.function.Tuples;
 
+import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 @ActiveProfiles("test")
 @SpringBootTest
@@ -34,28 +42,25 @@ public class NodeTest {
       new TransactionManager<>("nodeTest");
 
   // state
-  private final NodeProperties filterConfig;
+  private final NodeProperties config;
 
   @SneakyThrows
   public NodeTest() {
-    filterConfig =
+    config =
         mapper.readValue(
-            this.getClass().getResourceAsStream("fixtures/config.json"),
-            NodeProperties.class);
+            this.getClass().getResourceAsStream("fixtures/config.json"), NodeProperties.class);
   }
 
   @Test
   @SneakyThrows
   void testFilterTransformer() {
-    val inputStream = this.getClass().getResourceAsStream("fixtures/filters/input.json");
     val input =
-        mapper.readValue(inputStream, new TypeReference<List<GraphEvent>>() {}).stream()
-            .map(tm::newTransaction)
-            .collect(Collectors.toList());
+        createGraphEventTransactionsFromStream(
+            this.getClass().getResourceAsStream("fixtures/filters/input.json"));
 
-    val transformer = Node.createFilterTransformer(filterConfig);
+    val transformer = Node.createFilterTransformer(config);
 
-    Flux<Transaction<GraphEvent>> source = Flux.fromIterable(input).transform(transformer);
+    val source = Flux.fromIterable(input).transform(transformer);
 
     StepVerifier.create(source)
         .expectNextMatches(tx -> tx.get().getAnalysisType().equals("variantCall"))
@@ -65,14 +70,47 @@ public class NodeTest {
   }
 
   @Test
+  @SneakyThrows
   void testGqlQueryTransformer() {
+    val input =
+        createGraphEventTransactionsFromStream(
+            this.getClass().getResourceAsStream("fixtures/gqlQuery/input.json"));
 
+    List<Map<String, Object>> results =
+        createMapListFromJsonFileStream(
+            this.getClass().getResourceAsStream("fixtures/gqlQuery/results.json"));
+
+    val rdpcClientMock = mock(RdpcClient.class);
+
+    // first input returns a result
+    when(rdpcClientMock.simpleQueryWithEvent(config.getGqlQueryString(), input.get(0).get()))
+        .thenReturn(Mono.just(results.get(0)));
+
+    // second input is a 404 (RDPC client throws DeadLetterQueueableException)
+    when(rdpcClientMock.simpleQueryWithEvent(config.getGqlQueryString(), input.get(1).get()))
+        .thenThrow(DeadLetterQueueableException.class);
+
+    val transformer = Node.createGqlQueryTransformer(rdpcClientMock, config.getGqlQueryString());
+
+    val source = Flux.fromIterable(input).transform(transformer);
+
+    StepVerifier.create(source)
+        .expectNextMatches(
+            tx ->
+                mapper
+                    .convertValue(tx.get(), JsonNode.class)
+                    .at("/data/analyses/0/analysisId")
+                    .asText()
+                    .equals("does-exist"))
+        .expectError(DeadLetterQueueableException.class)
+        .verify();
   }
 
   /**
-   * Helper method to ensure that the doOnDiscard hook is behaving as expected:
-   * 1. Should fail on the first filter
-   * 2. Should correctly reject/not-reject the transaction based on the filter that failed
+   * Helper method to ensure that the doOnDiscard hook is behaving as expected: 1. Should fail on
+   * the first filter 2. Should correctly reject/not-reject the transaction based on the filter that
+   * failed
+   *
    * @param discarded the collection of discarded elements (order is maintained from input Flux)
    */
   @SneakyThrows
@@ -89,19 +127,32 @@ public class NodeTest {
 
     // Fails on second filter due to bad analysisType (should reject
     assertThat(testDiscardOne.getFilterAndResult())
-        .isEqualTo(Tuples.of(filterConfig.getFilters().get(1), false));
+        .isEqualTo(Tuples.of(config.getFilters().get(1), false));
     assertThat((AtomicBoolean) receivedRejectedField.get(testDiscardOne.getTransaction()));
 
     // Fails on first filter due to bad study
     assertThat(testDiscardTwo.getFilterAndResult())
-        .isEqualTo(Tuples.of(filterConfig.getFilters().get(0), false));
+        .isEqualTo(Tuples.of(config.getFilters().get(0), false));
     assertThat((AtomicBoolean) receivedRejectedField.get(testDiscardTwo.getTransaction()))
         .isFalse();
 
     // Both filters fail but we want to fail fast and ensure only the first is caught
     assertThat(testDiscardThree.getFilterAndResult())
-        .isEqualTo(Tuples.of(filterConfig.getFilters().get(0), false));
+        .isEqualTo(Tuples.of(config.getFilters().get(0), false));
     assertThat((AtomicBoolean) receivedRejectedField.get(testDiscardThree.getTransaction()))
         .isFalse();
+  }
+
+  @SneakyThrows
+  private List<Transaction<GraphEvent>> createGraphEventTransactionsFromStream(
+      InputStream inputStream) {
+    return mapper.readValue(inputStream, new TypeReference<List<GraphEvent>>() {}).stream()
+        .map(tm.newTransaction())
+        .collect(Collectors.toList());
+  }
+
+  @SneakyThrows
+  private List<Map<String, Object>> createMapListFromJsonFileStream(InputStream inputStream) {
+    return mapper.readValue(inputStream, new TypeReference<>() {});
   }
 }

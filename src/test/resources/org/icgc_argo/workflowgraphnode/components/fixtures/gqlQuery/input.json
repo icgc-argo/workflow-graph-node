@@ -1,0 +1,16 @@
+[
+  {
+    "analysisId": "does-exist",
+    "analysisState": "COMPLETE",
+    "analysisType": "variantCall",
+    "studyId": "GRAPH",
+    "experimentalStrategy": "WGS"
+  },
+  {
+    "analysisId": "does-not-exist",
+    "analysisState": "COMPLETE",
+    "analysisType": "variantCall",
+    "studyId": "GRAPH",
+    "experimentalStrategy": "WGS"
+  }
+]
