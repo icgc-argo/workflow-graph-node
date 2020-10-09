@@ -1,0 +1,40 @@
+{
+  "functionLanguage": "js",
+  "filters": [
+    {
+      "expression": "data.studyId === 'JAS-CA'",
+      "reject": false
+    },
+    {
+      "expression": "data.analysisType === 'variantCall'",
+      "reject": true
+    }
+  ],
+  "gqlQueryString": "query ANALYSIS($analysisId: String!) {\n  analyses(filter: {analysisId: $analysisId}) {\n    analysisId\n    studyId\n  }\n}",
+  "activationFunction": "return {\"analysis_id\": data.data.analyses[0].analysisId, \"study_id\": data.data.analyses[0].studyId, \"score_url\": \"https://score.rdpc-qa.cancercollaboratory.org\", \"song_url\": \"https://song.rdpc-qa.cancercollaboratory.org\"};",
+  "input": [
+    {
+      "exchange": "example-node-0-complete",
+      "queue": "example-node-1"
+    },
+    {
+      "exchange": "queued-ingest-node-0",
+      "queue": "example-node-1"
+    }
+  ],
+  "running": {
+    "exchange": "example-node-1-running",
+    "queue": "example-node-1-running"
+  },
+  "complete": {
+    "exchange": "example-node-1-complete",
+    "queue": "example-node-1-complete"
+  },
+  "workflow": {
+    "url": "icgc-argo/nextflow-data-processing-utility-tools",
+    "revision": "2.4.0",
+    "schemaName": "WorkflowParamsTest",
+    "schemaNamespace": "org.icgc_argo.workflow_graph_lib.schema",
+    "schemaVersion": "1"
+  }
+}

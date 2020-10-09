@@ -40,7 +40,7 @@ public class NodeTest {
   public NodeTest() {
     filterConfig =
         mapper.readValue(
-            this.getClass().getResourceAsStream("fixtures/filters/filterConfig.json"),
+            this.getClass().getResourceAsStream("fixtures/config.json"),
             NodeProperties.class);
   }
 
@@ -62,6 +62,11 @@ public class NodeTest {
         .expectComplete()
         .verifyThenAssertThat()
         .hasDiscardedElementsSatisfying(this::filterTransformerDiscardedTests);
+  }
+
+  @Test
+  void testGqlQueryTransformer() {
+
   }
 
   /**
