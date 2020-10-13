@@ -1,8 +1,6 @@
 package org.icgc_argo.workflowgraphnode.config;
 
 import java.util.List;
-import java.util.Queue;
-
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;

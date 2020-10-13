@@ -1,6 +1,13 @@
 package org.icgc_argo.workflowgraphnode.components;
 
+import static org.icgc_argo.workflow_graph_lib.polyglot.Polyglot.evaluateBooleanExpression;
+import static org.icgc_argo.workflow_graph_lib.polyglot.Polyglot.runMainFunctionWithData;
+import static org.icgc_argo.workflow_graph_lib.utils.JacksonUtils.toMap;
+
 import com.pivotal.rabbitmq.stream.Transaction;
+import java.util.Map;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -12,14 +19,6 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
-
-import java.util.Map;
-import java.util.function.BiFunction;
-import java.util.function.Function;
-
-import static org.icgc_argo.workflow_graph_lib.polyglot.Polyglot.evaluateBooleanExpression;
-import static org.icgc_argo.workflow_graph_lib.polyglot.Polyglot.runMainFunctionWithData;
-import static org.icgc_argo.workflow_graph_lib.utils.JacksonUtils.toMap;
 
 @Slf4j
 public class Node {

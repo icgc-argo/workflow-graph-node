@@ -1,11 +1,22 @@
 package org.icgc_argo.workflowgraphnode.components;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pivotal.rabbitmq.stream.Transaction;
 import com.pivotal.rabbitmq.stream.TransactionManager;
 import com.pivotal.rabbitmq.stream.Transactional;
+import java.io.InputStream;
+import java.lang.reflect.Field;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 import lombok.SneakyThrows;
 import lombok.val;
 import org.icgc_argo.workflow_graph_lib.exceptions.DeadLetterQueueableException;
@@ -14,7 +25,6 @@ import org.icgc_argo.workflow_graph_lib.schema.GraphEvent;
 import org.icgc_argo.workflow_graph_lib.workflow.client.RdpcClient;
 import org.icgc_argo.workflowgraphnode.components.Node.EventFilterPair;
 import org.icgc_argo.workflowgraphnode.config.NodeProperties;
-import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
@@ -22,19 +32,6 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 import reactor.util.function.Tuples;
-
-import java.io.InputStream;
-import java.lang.reflect.Field;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Consumer;
-import java.util.stream.Collectors;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 @ActiveProfiles("test")
 @SpringBootTest
@@ -51,7 +48,7 @@ public class NodeTest {
   private final NodeProperties config;
 
   @SneakyThrows
-  public NodeTest() throws NoSuchFieldException {
+  public NodeTest() {
     config =
         mapper.readValue(
             this.getClass().getResourceAsStream("fixtures/config.json"), NodeProperties.class);
@@ -141,7 +138,7 @@ public class NodeTest {
     // third input returns a 401 (RDPC client throws RequeueableException)
     // expectation: Errors.handle() deals with error then requeues
     when(rdpcClientMock.simpleQueryWithEvent(config.getGqlQueryString(), input.get(2).get()))
-            .thenThrow(RequeueableException.class);
+        .thenThrow(RequeueableException.class);
 
     val transformer = Node.createGqlQueryTransformer(rdpcClientMock, config.getGqlQueryString());
 
