@@ -1,6 +1,7 @@
 package org.icgc_argo.workflowgraphnode.components;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.icgc_argo.workflowgraphnode.components.CommonFunctions.convertToTransaction;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -167,6 +168,29 @@ public class NodeTest {
 
     // expecting requeue on RequeueableException
     assertThat((AtomicBoolean) receivedRequeuedField.get(discardedIter[1]));
+  }
+
+  @Test
+  public void testActivationFunctionTransformer() {
+    // gql query result is input into activation func
+    Map<String, Object> activationFuncInput =
+            createMapListFromJsonFileStream(
+                    this.getClass().getResourceAsStream("fixtures/gqlQuery/results.json")).get(0);
+
+    val transformer = Node.createActivationFunctionTransformer(config);
+
+    val source = Flux.just(convertToTransaction(activationFuncInput)).transform(transformer);
+
+    Map<String, Object> expected = Map.of(
+            "analysis_id", "does-exist",
+            "study_id", "GRAPH",
+            "score_url", "https://score.rdpc-qa.cancercollaboratory.org",
+            "song_url", "https://song.rdpc-qa.cancercollaboratory.org");
+
+    StepVerifier.create(source)
+            .expectNextMatches(tx ->  expected.equals(tx.get()))
+            .expectComplete()
+            .verify();
   }
 
   @SneakyThrows
