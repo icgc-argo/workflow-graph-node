@@ -1,7 +1,8 @@
 package org.icgc_argo.workflowgraphnode.components;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.icgc_argo.workflowgraphnode.util.TransactionUtils.wrapWithTransaction;
+import static org.icgc_argo.workflowgraphnode.util.TransactionUtils.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -10,13 +11,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pivotal.rabbitmq.stream.Transaction;
 import com.pivotal.rabbitmq.stream.TransactionManager;
-import com.pivotal.rabbitmq.stream.Transactional;
 import java.io.InputStream;
-import java.lang.reflect.Field;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import lombok.SneakyThrows;
 import lombok.val;
@@ -40,9 +39,6 @@ public class NodeTest {
   private final TransactionManager<GraphEvent, Transaction<GraphEvent>> tm =
       new TransactionManager<>("nodeTest");
 
-  private final Field receivedRejectedField;
-  private final Field receivedRequeuedField;
-
   // state
   private final NodeProperties config;
 
@@ -51,13 +47,6 @@ public class NodeTest {
     config =
         mapper.readValue(
             this.getClass().getResourceAsStream("fixtures/config.json"), NodeProperties.class);
-
-    // will want to make sure the transaction is being handled correctly throughout the tests
-    receivedRejectedField = Transactional.class.getDeclaredField("receivedRejected");
-    receivedRequeuedField = Transactional.class.getDeclaredField("receivedRequeued");
-
-    receivedRejectedField.setAccessible(true);
-    receivedRequeuedField.setAccessible(true);
   }
 
   @Test
@@ -96,18 +85,19 @@ public class NodeTest {
     // Fails on second filter due to bad analysisType (should reject
     assertThat(testDiscardOne.getFilterAndResult())
         .isEqualTo(Tuples.of(config.getFilters().get(1), false));
-    assertThat((AtomicBoolean) receivedRejectedField.get(testDiscardOne.getTransaction()));
+    assertThat(isRejected(testDiscardOne.getTransaction()))
+        .isTrue();
 
     // Fails on first filter due to bad study
     assertThat(testDiscardTwo.getFilterAndResult())
         .isEqualTo(Tuples.of(config.getFilters().get(0), false));
-    assertThat((AtomicBoolean) receivedRejectedField.get(testDiscardTwo.getTransaction()))
+    assertThat(isRejected(testDiscardTwo.getTransaction()))
         .isFalse();
 
     // Both filters fail but we want to fail fast and ensure only the first is caught
     assertThat(testDiscardThree.getFilterAndResult())
         .isEqualTo(Tuples.of(config.getFilters().get(0), false));
-    assertThat((AtomicBoolean) receivedRejectedField.get(testDiscardThree.getTransaction()))
+    assertThat(isRejected(testDiscardThree.getTransaction()))
         .isFalse();
   }
 
@@ -162,10 +152,10 @@ public class NodeTest {
   private void gqlQueryTransformerDiscardedTests(Collection<Object> discarded) {
     val discardedIter = discarded.toArray();
     // expecting DLQ on DeadLetterQueueableException
-    assertThat((AtomicBoolean) receivedRejectedField.get(discardedIter[0])).isTrue();
+    assertThat(isRejected(discardedIter[0])).isTrue();
 
     // expecting requeue on RequeueableException
-    assertThat((AtomicBoolean) receivedRequeuedField.get(discardedIter[1])).isTrue();
+    assertThat(isRequeued(discardedIter[1])).isTrue();
   }
 
   @Test
@@ -193,21 +183,20 @@ public class NodeTest {
             "score_url", "https://score.rdpc-qa.cancercollaboratory.org",
             "song_url", "https://song.rdpc-qa.cancercollaboratory.org");
 
+    Consumer<Collection<Object>> expectedActivationFunctionDiscardBehavior = discarded -> {
+      val discardedIter = discarded.toArray();
+      val discardedInput = discardedIter[0];
+
+      assertTrue(isRejected(discardedInput));
+    };
+
     StepVerifier.create(source)
         .expectNextMatches(tx -> expected.equals(tx.get()))
         .expectComplete()
         .verifyThenAssertThat()
         .hasNotDroppedElements()
         .hasNotDroppedErrors()
-        .hasDiscardedElementsSatisfying(this::activationFunctionDiscardedTest);
-  }
-
-  @SneakyThrows
-  private void activationFunctionDiscardedTest(Collection<Object> discarded) {
-    val discardedIter = discarded.toArray();
-    val discardedInput = discardedIter[0];
-
-    assertThat((AtomicBoolean) receivedRejectedField.get(discardedInput)).isTrue();
+        .hasDiscardedElementsSatisfying(expectedActivationFunctionDiscardBehavior);
   }
 
   @SneakyThrows

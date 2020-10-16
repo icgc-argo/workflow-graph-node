@@ -2,7 +2,7 @@ package org.icgc_argo.workflowgraphnode.components;
 
 import static org.icgc_argo.workflowgraphnode.util.JacksonUtils.readValue;
 import static org.icgc_argo.workflowgraphnode.util.TransactionUtils.*;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Map;
 import lombok.SneakyThrows;
