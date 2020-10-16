@@ -45,9 +45,11 @@ public class Node {
   public static Function<
           Flux<Transaction<Map<String, Object>>>, Flux<Transaction<Map<String, Object>>>>
       createActivationFunctionTransformer(NodeProperties nodeProperties) {
+    // using flatMap because in reactor 3.3.2.RELEASE, map doesn't have "Error Mode Support" for
+    // onErrorContinue
     return (input) ->
         input
-            .map(activationFunction(nodeProperties))
+            .flatMap(tx -> Mono.just(activationFunction(nodeProperties).apply(tx)))
             .onErrorContinue(Errors.handle())
             .doOnNext(tx -> log.info("Activation Result: {}", tx.get()));
   }

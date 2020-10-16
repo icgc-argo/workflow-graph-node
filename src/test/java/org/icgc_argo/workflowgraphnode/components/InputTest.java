@@ -1,7 +1,7 @@
 package org.icgc_argo.workflowgraphnode.components;
 
-import static org.icgc_argo.workflowgraphnode.components.CommonFunctions.convertToTransaction;
-import static org.icgc_argo.workflowgraphnode.components.CommonFunctions.readValue;
+import static org.icgc_argo.workflowgraphnode.util.JacksonUtils.readValue;
+import static org.icgc_argo.workflowgraphnode.util.TransactionUtils.wrapWithTransaction;
 
 import java.util.Map;
 import lombok.SneakyThrows;
@@ -29,9 +29,9 @@ public class InputTest {
   public void testInputToRunRequestHandler() {
     val handler = Input.createInputToRunRequestHandler(config.getWorkflow());
 
-    Map<String, Object> wfParams = Map.of("studyId", "TEST-CA"); // TODO move to resources json
+    Map<String, Object> wfParams = Map.of("studyId", "TEST-CA");
 
-    val source = Flux.just(convertToTransaction(wfParams)).transform(handler);
+    val source = Flux.just(wrapWithTransaction(wfParams)).transform(handler);
 
     val wfProperties = config.getWorkflow();
 
