@@ -57,9 +57,9 @@ public class ErrorsTest {
 
           assertThat(discardedTransactions.length).isEqualTo(4);
 
-          assertTrue(isAcked(discardedTransactions[0]));
+          assertTrue(isAcknowledged(discardedTransactions[0]));
           assertTrue(isRequeued(discardedTransactions[1]));
-          assertTrue(isNotAcked(discardedTransactions[2]));
+          assertTrue(isNotAcknowledged(discardedTransactions[2]));
           assertTrue(isRejected(discardedTransactions[3]));
         };
 

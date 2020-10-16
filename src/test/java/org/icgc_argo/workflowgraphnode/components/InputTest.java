@@ -51,7 +51,7 @@ public class InputTest {
         .hasNotDiscardedElements();
 
     // handler is just mapping so transaction should not be acknowledged yet
-    assertTrue(isNotAcked(wfParamTransaction));
+    assertTrue(isNotAcknowledged(wfParamTransaction));
   }
 
   @Test

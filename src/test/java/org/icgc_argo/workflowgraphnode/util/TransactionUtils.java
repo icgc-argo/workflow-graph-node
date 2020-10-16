@@ -16,6 +16,7 @@ public final class TransactionUtils {
   /** Util class, doesn't need to be instantiated. */
   private TransactionUtils() {}
 
+  @SneakyThrows
   public static <T> Transaction<T> wrapWithTransaction(T obj) {
     final Consumer<Transactional.Identifier> NOOP = something -> {};
     return new Transactional<>(
@@ -24,44 +25,44 @@ public final class TransactionUtils {
 
   @SneakyThrows
   public static Boolean isRejected(Object transaction) {
-    return _isRejected(transaction).get()
-        && !_isRequeued(transaction).get()
-        && _isCommitted(transaction);
+    return receivedRejectedFieldValue(transaction).get()
+        && !receivedRequeuedFieldValue(transaction).get()
+        && committedFieldValue(transaction);
   }
 
   @SneakyThrows
   public static Boolean isRequeued(Object transaction) {
-    return !_isRejected(transaction).get()
-        && _isRequeued(transaction).get()
-        && _isCommitted(transaction);
+    return !receivedRejectedFieldValue(transaction).get()
+        && receivedRequeuedFieldValue(transaction).get()
+        && committedFieldValue(transaction);
   }
 
   @SneakyThrows
-  public static Boolean isAcked(Object transaction) {
-    return !_isRejected(transaction).get()
-        && !_isRequeued(transaction).get()
-        && _isCommitted(transaction);
+  public static Boolean isAcknowledged(Object transaction) {
+    return !receivedRejectedFieldValue(transaction).get()
+        && !receivedRequeuedFieldValue(transaction).get()
+        && committedFieldValue(transaction);
   }
 
   @SneakyThrows
-  public static Boolean isNotAcked(Object transaction) {
-    return !_isRejected(transaction).get()
-        && !_isRequeued(transaction).get()
-        && !_isCommitted(transaction);
+  public static Boolean isNotAcknowledged(Object transaction) {
+    return !receivedRejectedFieldValue(transaction).get()
+        && !receivedRequeuedFieldValue(transaction).get()
+        && !committedFieldValue(transaction);
   }
 
   @SneakyThrows
-  private static AtomicBoolean _isRejected(Object transaction) {
+  private static AtomicBoolean receivedRejectedFieldValue(Object transaction) {
     return (AtomicBoolean) receivedRejectedField.get(transaction);
   }
 
   @SneakyThrows
-  private static AtomicBoolean _isRequeued(Object transaction) {
+  private static AtomicBoolean receivedRequeuedFieldValue(Object transaction) {
     return (AtomicBoolean) receivedRequeuedField.get(transaction);
   }
 
   @SneakyThrows
-  private static Boolean _isCommitted(Object transaction) {
+  private static Boolean committedFieldValue(Object transaction) {
     return (Boolean) committedField.get(transaction);
   }
 

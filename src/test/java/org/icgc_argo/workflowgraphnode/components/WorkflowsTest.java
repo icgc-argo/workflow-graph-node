@@ -92,10 +92,10 @@ public class WorkflowsTest {
         .hasNotDroppedErrors()
         .hasNotDiscardedElements();
 
-    assertTrue(isNotAcked(runIdTransactions.get(0)));
+    assertTrue(isNotAcknowledged(runIdTransactions.get(0)));
     assertTrue(isRejected(runIdTransactions.get(1)));
     assertTrue(isRequeued(runIdTransactions.get(2)));
-    assertTrue(isAcked(runIdTransactions.get(3)));
+    assertTrue(isAcknowledged(runIdTransactions.get(3)));
   }
 
   @Test
