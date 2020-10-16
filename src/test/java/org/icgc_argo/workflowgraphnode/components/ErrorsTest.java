@@ -7,7 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.Collection;
 import java.util.List;
 import java.util.function.Consumer;
-import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.icgc_argo.workflow_graph_lib.exceptions.*;
@@ -21,9 +20,6 @@ import reactor.test.StepVerifier;
 @ActiveProfiles("test")
 @Slf4j
 public class ErrorsTest {
-
-  @SneakyThrows
-  public ErrorsTest() {}
 
   @Test
   public void testErrorHandler() {

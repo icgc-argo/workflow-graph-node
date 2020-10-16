@@ -1,20 +1,19 @@
 package org.icgc_argo.workflowgraphnode.components;
 
 import static org.icgc_argo.workflowgraphnode.util.JacksonUtils.readValue;
-import static org.icgc_argo.workflowgraphnode.util.TransactionUtils.wrapWithTransaction;
+import static org.icgc_argo.workflowgraphnode.util.TransactionUtils.*;
+import static org.junit.Assert.assertTrue;
 
 import java.util.Map;
 import lombok.SneakyThrows;
 import lombok.val;
 import org.icgc_argo.workflowgraphnode.config.NodeProperties;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;
 
 @ActiveProfiles("test")
-@SpringBootTest
 public class InputTest {
   private final NodeProperties config;
 
@@ -31,7 +30,9 @@ public class InputTest {
 
     Map<String, Object> wfParams = Map.of("studyId", "TEST-CA");
 
-    val source = Flux.just(wrapWithTransaction(wfParams)).transform(handler);
+    val wfParamTransaction = wrapWithTransaction(wfParams);
+
+    val source = Flux.just(wfParamTransaction).transform(handler);
 
     val wfProperties = config.getWorkflow();
 
@@ -48,5 +49,26 @@ public class InputTest {
         .hasNotDroppedElements()
         .hasNotDroppedErrors()
         .hasNotDiscardedElements();
+
+    // handler is just mapping so transaction should not be acknowledged yet
+    assertTrue(isNotAcked(wfParamTransaction));
+  }
+
+  @Test
+  public void testErrorHandledInInputToRunRequestHandler() {
+    // imagine node was configured incorrectly and workflow object is null
+    val handler = Input.createInputToRunRequestHandler(null);
+
+    Map<String, Object> wfParams = Map.of("studyId", "TEST-CA");
+
+    val wfParamTransaction = wrapWithTransaction(wfParams);
+
+    val source = Flux.just(wfParamTransaction).transform(handler);
+
+    StepVerifier.create(source)
+            .expectComplete()
+            .verify();
+
+    assertTrue(isRejected(wfParamTransaction));
   }
 }
