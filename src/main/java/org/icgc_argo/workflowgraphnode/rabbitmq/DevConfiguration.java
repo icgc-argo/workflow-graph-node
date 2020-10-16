@@ -2,7 +2,6 @@ package org.icgc_argo.workflowgraphnode.rabbitmq;
 
 import com.pivotal.rabbitmq.RabbitEndpointService;
 import com.pivotal.rabbitmq.topology.ExchangeType;
-import java.util.Collections;
 import java.util.List;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
@@ -59,7 +58,7 @@ public class DevConfiguration {
             List.of("DO123"),
             List.of(new AnalysisFile("SNV")));
 
-    val demoStream =  Flux.fromIterable(List.of(demoEvent));
+    val demoStream = Flux.fromIterable(List.of(demoEvent));
 
     return rabbit
         .declareTopology(

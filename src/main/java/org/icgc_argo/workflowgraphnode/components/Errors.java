@@ -11,6 +11,19 @@ import org.icgc_argo.workflow_graph_lib.exceptions.RequeueableException;
 @Slf4j
 public class Errors {
 
+  /**
+   * Biconsumer for onErrorContinue handlers which handles transaction based on Exception rules
+   * (rules: https://github.com/icgc-argo/workflow-graph-lib#exceptions)
+   *
+   * <p>Notes:
+   *
+   * <p>- onErrorContinue is only supported with some operators, look for operators marked with
+   * "Error Mode Support" in reactor documentation.
+   *
+   * <p>- onErrorContinue behaves differently with Mono since there is only one and nothing to
+   * continue. See Mono doc for more info:
+   * https://projectreactor.io/docs/core/3.3.2.RELEASE/api/reactor/core/publisher/Mono.html#onErrorContinue-java.lang.Class-java.util.function.BiConsumer-
+   */
   public static BiConsumer<Throwable, Object> handle() {
     return (Throwable throwable, Object obj) -> {
       if (throwable instanceof GraphException && obj instanceof Transaction<?>) {
