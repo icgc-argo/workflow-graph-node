@@ -66,8 +66,11 @@ public class InputTest {
     val source = Flux.just(wfParamTransaction).transform(handler);
 
     StepVerifier.create(source)
-            .expectComplete()
-            .verify();
+        .expectComplete()
+        .verifyThenAssertThat()
+        .hasNotDroppedElements()
+        .hasNotDroppedErrors()
+        .hasNotDiscardedElements();
 
     assertTrue(isRejected(wfParamTransaction));
   }

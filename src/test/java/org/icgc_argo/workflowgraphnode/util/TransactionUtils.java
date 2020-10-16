@@ -20,7 +20,7 @@ public final class TransactionUtils {
   public static <T> Transaction<T> wrapWithTransaction(T obj) {
     final Consumer<Transactional.Identifier> NOOP = something -> {};
     return new Transactional<>(
-            new Transactional.Identifier("componentTest", 0), obj, NOOP, NOOP, NOOP);
+        new Transactional.Identifier("componentTest", 0), obj, NOOP, NOOP, NOOP);
   }
 
   @SneakyThrows

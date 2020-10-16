@@ -92,7 +92,7 @@ public class WorkflowsTest {
         .hasNotDroppedErrors()
         .hasNotDiscardedElements();
 
-    assertTrue(isNotAcknowledged(runIdTransactions.get(0)));
+    // assertions for transactions that were not next
     assertTrue(isRejected(runIdTransactions.get(1)));
     assertTrue(isRequeued(runIdTransactions.get(2)));
     assertTrue(isAcknowledged(runIdTransactions.get(3)));

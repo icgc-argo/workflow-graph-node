@@ -85,20 +85,17 @@ public class NodeTest {
     // Fails on second filter due to bad analysisType (should reject
     assertThat(testDiscardOne.getFilterAndResult())
         .isEqualTo(Tuples.of(config.getFilters().get(1), false));
-    assertThat(isRejected(testDiscardOne.getTransaction()))
-        .isTrue();
+    assertThat(isRejected(testDiscardOne.getTransaction())).isTrue();
 
     // Fails on first filter due to bad study
     assertThat(testDiscardTwo.getFilterAndResult())
         .isEqualTo(Tuples.of(config.getFilters().get(0), false));
-    assertThat(isRejected(testDiscardTwo.getTransaction()))
-        .isFalse();
+    assertThat(isRejected(testDiscardTwo.getTransaction())).isFalse();
 
     // Both filters fail but we want to fail fast and ensure only the first is caught
     assertThat(testDiscardThree.getFilterAndResult())
         .isEqualTo(Tuples.of(config.getFilters().get(0), false));
-    assertThat(isRejected(testDiscardThree.getTransaction()))
-        .isFalse();
+    assertThat(isRejected(testDiscardThree.getTransaction())).isFalse();
   }
 
   @Test
@@ -183,12 +180,13 @@ public class NodeTest {
             "score_url", "https://score.rdpc-qa.cancercollaboratory.org",
             "song_url", "https://song.rdpc-qa.cancercollaboratory.org");
 
-    Consumer<Collection<Object>> expectedActivationFunctionDiscardBehavior = discarded -> {
-      val discardedIter = discarded.toArray();
-      val discardedInput = discardedIter[0];
+    Consumer<Collection<Object>> expectedActivationFunctionDiscardBehavior =
+        discarded -> {
+          val discardedIter = discarded.toArray();
+          val discardedInput = discardedIter[0];
 
-      assertTrue(isRejected(discardedInput));
-    };
+          assertTrue(isRejected(discardedInput));
+        };
 
     StepVerifier.create(source)
         .expectNextMatches(tx -> expected.equals(tx.get()))
