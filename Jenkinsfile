@@ -1,4 +1,4 @@
-def dockerHubRepo = "icgcargo/workflow-graph-node"
+def dockerRepo = "docker.pkg.github.com/icgc-argo/workflow-graph-node"
 def gitHubRepo = "icgc-argo/workflow-graph-node"
 def commit = "UNKNOWN"
 def version = "UNKNOWN"
@@ -80,15 +80,15 @@ spec:
             }
             steps {
                 container('docker') {
-                    withCredentials([usernamePassword(credentialsId:'argoDockerHub', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
-                        sh 'docker login -u $USERNAME -p $PASSWORD'
+                    withCredentials([usernamePassword(credentialsId:'andricduPackages', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                        sh 'docker login https://docker.pkg.github.com -u $USERNAME -p $PASSWORD'
                     }
 
                     // DNS error if --network is default
-                    sh "docker build --network=host . -t ${dockerHubRepo}:edge -t ${dockerHubRepo}:${commit}"
+                    sh "docker build --network=host . -t ${dockerRepo}:edge -t ${dockerRepo}:${commit}"
 
-                    sh "docker push ${dockerHubRepo}:${commit}"
-                    sh "docker push ${dockerHubRepo}:edge"
+                    sh "docker push ${dockerRepo}:${commit}"
+                    sh "docker push ${dockerRepo}:edge"
                 }
             }
         }
@@ -98,15 +98,15 @@ spec:
             }
             steps {
                 container('docker') {
-                    withCredentials([usernamePassword(credentialsId:'argoDockerHub', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
-                        sh 'docker login -u $USERNAME -p $PASSWORD'
+                    withCredentials([usernamePassword(credentialsId:'andricduPackages', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                        sh 'docker login https://docker.pkg.github.com -u $USERNAME -p $PASSWORD'
                     }
 
                     // DNS error if --network is default
-                    sh "docker build --network=host . -t ${dockerHubRepo}:latest -t ${dockerHubRepo}:${version}"
+                    sh "docker build --network=host . -t ${dockerRepo}:latest -t ${dockerRepo}:${version}"
 
-                    sh "docker push ${dockerHubRepo}:${version}"
-                    sh "docker push ${dockerHubRepo}:latest"
+                    sh "docker push ${dockerRepo}:${version}"
+                    sh "docker push ${dockerRepo}:latest"
                 }
             }
         }
