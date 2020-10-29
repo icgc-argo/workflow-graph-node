@@ -1,4 +1,4 @@
-def dockerRepo = "docker.pkg.github.com/icgc-argo/workflow-graph-node"
+def dockerRepo = "ghcr.io/icgc-argo/workflow-graph-node"
 def gitHubRepo = "icgc-argo/workflow-graph-node"
 def commit = "UNKNOWN"
 def version = "UNKNOWN"
@@ -81,7 +81,7 @@ spec:
             steps {
                 container('docker') {
                     withCredentials([usernamePassword(credentialsId:'andricduPackages', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
-                        sh 'docker login https://docker.pkg.github.com -u $USERNAME -p $PASSWORD'
+                        sh 'docker login ghcr.io -u $USERNAME -p $PASSWORD'
                     }
 
                     // DNS error if --network is default
@@ -99,7 +99,7 @@ spec:
             steps {
                 container('docker') {
                     withCredentials([usernamePassword(credentialsId:'andricduPackages', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
-                        sh 'docker login https://docker.pkg.github.com -u $USERNAME -p $PASSWORD'
+                        sh 'docker login ghcr.io -u $USERNAME -p $PASSWORD'
                     }
 
                     // DNS error if --network is default
