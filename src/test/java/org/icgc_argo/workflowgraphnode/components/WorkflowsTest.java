@@ -10,7 +10,9 @@ import static org.mockito.Mockito.when;
 import java.util.List;
 import lombok.SneakyThrows;
 import lombok.Value;
+import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import org.icgc_argo.workflow_graph_lib.exceptions.RequeueableException;
 import org.icgc_argo.workflow_graph_lib.schema.GraphEvent;
 import org.icgc_argo.workflow_graph_lib.workflow.client.RdpcClient;
 import org.icgc_argo.workflow_graph_lib.workflow.model.RunRequest;
@@ -21,6 +23,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
+@Slf4j
 @ActiveProfiles("test")
 public class WorkflowsTest {
   private final NodeProperties config;
@@ -96,6 +99,29 @@ public class WorkflowsTest {
     assertTrue(isRejected(runIdTransactions.get(1)));
     assertTrue(isRequeued(runIdTransactions.get(2)));
     assertTrue(isAcknowledged(runIdTransactions.get(3)));
+  }
+
+  @Test
+  public void testRunNotFoundRun() {
+    val runId = "WES-im_not_really_here";
+    val transaction = wrapWithTransaction(runId);
+
+    val rdpcClientMock = mock(RdpcClient.class);
+    when(rdpcClientMock.getWorkflowStatus(runId))
+        .thenReturn(
+            Mono.create(
+                sink ->
+                    sink.error(
+                        new RequeueableException(String.format("Run %s not found!", runId)))));
+
+    val flux =
+        Flux.just(transaction)
+            .handle(Workflows.handleRunStatus(rdpcClientMock))
+            .onErrorContinue(Errors.handle());
+
+    StepVerifier.create(flux).expectComplete().verify();
+
+    assertTrue(isRequeued(transaction));
   }
 
   @Test
