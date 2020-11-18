@@ -42,7 +42,7 @@ public class Workflows {
       handleRunStatus(RdpcClient rdpcClient) {
     return (tx, sink) -> {
       log.debug("Checking status for: {}", tx.get());
-      val status = rdpcClient.getWorkflowStatus(tx.get());
+      val status = rdpcClient.getWorkflowStatus(tx.get()).doOnError(sink::error);
       status.subscribe(
           s -> {
             if (ROLLBACK.contains(s)) {
