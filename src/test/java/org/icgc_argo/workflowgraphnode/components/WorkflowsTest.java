@@ -8,6 +8,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
+import java.util.UUID;
 import lombok.SneakyThrows;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
@@ -132,7 +133,14 @@ public class WorkflowsTest {
 
     val ge =
         new GraphEvent(
-            "analysisId", "analysisState", "analysisType", "studyId", "WGS", List.of(), List.of());
+            UUID.randomUUID().toString(),
+            "analysisId",
+            "analysisState",
+            "analysisType",
+            "studyId",
+            "WGS",
+            List.of(),
+            List.of());
 
     when(rdpcClientMock.createGraphEventsForRun(runId)).thenReturn(Mono.just(List.of(ge)));
 
