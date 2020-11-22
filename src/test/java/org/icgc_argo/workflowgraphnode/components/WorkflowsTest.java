@@ -15,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.icgc_argo.workflow_graph_lib.exceptions.RequeueableException;
 import org.icgc_argo.workflow_graph_lib.schema.GraphEvent;
+import org.icgc_argo.workflow_graph_lib.schema.GraphRun;
 import org.icgc_argo.workflow_graph_lib.workflow.client.RdpcClient;
 import org.icgc_argo.workflow_graph_lib.workflow.model.RunRequest;
 import org.icgc_argo.workflowgraphnode.config.NodeProperties;
@@ -50,7 +51,7 @@ public class WorkflowsTest {
     val source = Flux.just(wrapWithTransaction(runReq)).flatMap(startRunFunc);
 
     StepVerifier.create(source)
-        .expectNextMatches(transaction -> transaction.get().equalsIgnoreCase(runId))
+        .expectNextMatches(transaction -> transaction.get().getRunId().equalsIgnoreCase(runId))
         .expectComplete()
         .verifyThenAssertThat()
         .hasNotDroppedElements()
@@ -79,7 +80,7 @@ public class WorkflowsTest {
                   when(rdpcClientMock.getWorkflowStatus(runIdStatePair.getRunId()))
                       .thenReturn(Mono.just(runIdStatePair.getState()));
 
-                  return wrapWithTransaction(runIdStatePair.getRunId());
+                  return wrapWithTransaction(new GraphRun(UUID.randomUUID().toString(), runIdStatePair.getRunId()));
                 })
             .collect(toList());
 
@@ -89,7 +90,7 @@ public class WorkflowsTest {
 
     StepVerifier.create(source)
         // transaction 0 is sent to the next call unchanged in the flux handler
-        .expectNextMatches(tx -> tx.get().equalsIgnoreCase("WES-1"))
+        .expectNextMatches(tx -> tx.get().getRunId().equalsIgnoreCase("WES-1"))
         .expectComplete()
         .verifyThenAssertThat()
         .hasNotDroppedElements()
@@ -104,16 +105,16 @@ public class WorkflowsTest {
 
   @Test
   public void testRunNotFoundRun() {
-    val runId = "WES-im_not_really_here";
-    val transaction = wrapWithTransaction(runId);
+    val graphRun = new GraphRun(UUID.randomUUID().toString(), "WES-im_not_really_here");
+    val transaction = wrapWithTransaction(graphRun);
 
     val rdpcClientMock = mock(RdpcClient.class);
-    when(rdpcClientMock.getWorkflowStatus(runId))
+    when(rdpcClientMock.getWorkflowStatus(graphRun.getRunId()))
         .thenReturn(
             Mono.create(
                 sink ->
                     sink.error(
-                        new RequeueableException(String.format("Run %s not found!", runId)))));
+                        new RequeueableException(String.format("Run %s not found!", graphRun.getRunId())))));
 
     val flux =
         Flux.just(transaction)
@@ -127,7 +128,7 @@ public class WorkflowsTest {
 
   @Test
   public void testRunAnalysesToGraphEvent() {
-    val runId = "WES-123456789";
+    val run = new GraphRun(UUID.randomUUID().toString(), "WES-123456789");
 
     val rdpcClientMock = mock(RdpcClient.class);
 
@@ -142,11 +143,11 @@ public class WorkflowsTest {
             List.of(),
             List.of());
 
-    when(rdpcClientMock.createGraphEventsForRun(runId)).thenReturn(Mono.just(List.of(ge)));
+    when(rdpcClientMock.createGraphEventsForRun(run.getRunId())).thenReturn(Mono.just(List.of(ge)));
 
     val func = Workflows.runAnalysesToGraphEvent(rdpcClientMock);
 
-    val source = Flux.just(wrapWithTransaction(runId)).flatMap(func);
+    val source = Flux.just(wrapWithTransaction(run)).flatMap(func);
 
     StepVerifier.create(source)
         .expectNextMatches(tx -> tx.get().equals(ge))

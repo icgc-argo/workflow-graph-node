@@ -18,6 +18,7 @@ import lombok.val;
 import org.apache.avro.AvroRuntimeException;
 import org.icgc_argo.workflow_graph_lib.exceptions.DeadLetterQueueableException;
 import org.icgc_argo.workflow_graph_lib.schema.GraphEvent;
+import org.icgc_argo.workflow_graph_lib.schema.GraphRun;
 import org.icgc_argo.workflow_graph_lib.workflow.client.RdpcClient;
 import org.icgc_argo.workflow_graph_lib.workflow.model.RunRequest;
 import org.icgc_argo.workflowgraphnode.components.Errors;
@@ -101,7 +102,7 @@ public class NodeConfiguration {
   public Disposable inputToRunning() {
     return rabbit
         .declareTopology(topologyConfig.runningTopology())
-        .createTransactionalProducerStream(String.class)
+        .createTransactionalProducerStream(GraphRun.class)
         .route()
         .toExchange(nodeProperties.getRunning().getExchange())
         .and()
@@ -116,16 +117,16 @@ public class NodeConfiguration {
   private Flux<Transaction<GraphEvent>> runningToCompleteStream() {
     return rabbit
         .declareTopology(topologyConfig.runningTopology())
-        .createTransactionalConsumerStream(nodeProperties.getRunning().getQueue(), String.class)
+        .createTransactionalConsumerStream(nodeProperties.getRunning().getQueue(), GraphRun.class)
         .receive()
         .delayElements(Duration.ofSeconds(10))
-        .doOnNext(r -> log.debug("Checking status of: {}", r.get()))
+        .doOnNext(r -> log.debug("Checking status of: {}", r.get().getRunId()))
         .handle(Workflows.handleRunStatus(rdpcClient))
         .onErrorContinue(Errors.handle())
         .flatMap(Workflows.runAnalysesToGraphEvent(rdpcClient));
   }
 
-  private Flux<Transaction<String>> mergedInputStreams() {
+  private Flux<Transaction<GraphRun>> mergedInputStreams() {
     return Flux.merge(directInputStream(), queuedInputStream())
         .doOnNext(item -> log.info("Attempting to run workflow with: {}", item.get()))
         .flatMap(Workflows.startRuns(rdpcClient))
