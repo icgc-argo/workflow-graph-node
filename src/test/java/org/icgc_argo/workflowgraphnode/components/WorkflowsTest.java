@@ -29,6 +29,7 @@ import reactor.test.StepVerifier;
 @ActiveProfiles("test")
 public class WorkflowsTest {
   private final NodeProperties config;
+  private final String testingUUID = UUID.randomUUID().toString();
 
   @SneakyThrows
   public WorkflowsTest() {
@@ -80,7 +81,7 @@ public class WorkflowsTest {
                   when(rdpcClientMock.getWorkflowStatus(runIdStatePair.getRunId()))
                       .thenReturn(Mono.just(runIdStatePair.getState()));
 
-                  return wrapWithTransaction(new GraphRun(UUID.randomUUID().toString(), runIdStatePair.getRunId()));
+                  return wrapWithTransaction(new GraphRun(testingUUID, runIdStatePair.getRunId()));
                 })
             .collect(toList());
 
@@ -105,7 +106,7 @@ public class WorkflowsTest {
 
   @Test
   public void testRunNotFoundRun() {
-    val graphRun = new GraphRun(UUID.randomUUID().toString(), "WES-im_not_really_here");
+    val graphRun = new GraphRun(testingUUID, "WES-im_not_really_here");
     val transaction = wrapWithTransaction(graphRun);
 
     val rdpcClientMock = mock(RdpcClient.class);
@@ -114,7 +115,8 @@ public class WorkflowsTest {
             Mono.create(
                 sink ->
                     sink.error(
-                        new RequeueableException(String.format("Run %s not found!", graphRun.getRunId())))));
+                        new RequeueableException(
+                            String.format("Run %s not found!", graphRun.getRunId())))));
 
     val flux =
         Flux.just(transaction)
@@ -128,13 +130,13 @@ public class WorkflowsTest {
 
   @Test
   public void testRunAnalysesToGraphEvent() {
-    val run = new GraphRun(UUID.randomUUID().toString(), "WES-123456789");
+    val run = new GraphRun(testingUUID, "WES-123456789");
 
     val rdpcClientMock = mock(RdpcClient.class);
 
     val ge =
         new GraphEvent(
-            UUID.randomUUID().toString(),
+                testingUUID,
             "analysisId",
             "analysisState",
             "analysisType",
