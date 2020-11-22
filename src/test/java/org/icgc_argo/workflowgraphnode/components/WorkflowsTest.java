@@ -136,7 +136,7 @@ public class WorkflowsTest {
 
     val ge =
         new GraphEvent(
-                testingUUID,
+            testingUUID,
             "analysisId",
             "analysisState",
             "analysisType",

@@ -37,7 +37,10 @@ public class Workflows {
     return tx ->
         rdpcClient
             .startRun(tx.get())
-            .flatMap(response -> Mono.fromCallable(() -> tx.map(new GraphRun(UUID.randomUUID().toString(), response))));
+            .flatMap(
+                response ->
+                    Mono.fromCallable(
+                        () -> tx.map(new GraphRun(UUID.randomUUID().toString(), response))));
   }
 
   public static BiConsumer<Transaction<GraphRun>, SynchronousSink<Transaction<GraphRun>>>

@@ -110,7 +110,7 @@ public class NodeConfiguration {
         .alwaysRetry(Duration.ofSeconds(5))
         .then()
         .send(mergedInputStreams())
-        .doOnNext(tx -> log.info("Run request confirmed by RDPC, runId: {}", tx.get()))
+        .doOnNext(tx -> log.info("Run request confirmed by RDPC, runId: {}", tx.get().getRunId()))
         .subscribe(Transaction::commit);
   }
 
