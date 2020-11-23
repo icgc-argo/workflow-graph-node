@@ -1,14 +1,22 @@
 {
-  "type" : "record",
-  "name" : "WorkflowParamsTest",
+  "type": "record",
+  "name": "WorkflowParamsTest",
   "namespace": "org.icgc_argo.workflow_graph_lib.schema",
-  "fields" : [
+  "fields": [
     {
-      "name" : "analysis_id",
-      "type" : "string"
+      "name": "analysis_id",
+      "type": "string"
     },
     {
       "name": "study_id",
+      "type": "string"
+    },
+    {
+      "name": "score_url",
+      "type": "string"
+    },
+    {
+      "name": "song_url",
       "type": "string"
     }
   ]

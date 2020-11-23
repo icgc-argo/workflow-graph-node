@@ -3,6 +3,7 @@ package org.icgc_argo.workflowgraphnode.rabbitmq;
 import com.pivotal.rabbitmq.RabbitEndpointService;
 import com.pivotal.rabbitmq.topology.ExchangeType;
 import java.util.List;
+import java.util.UUID;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
@@ -50,6 +51,7 @@ public class DevConfiguration {
   public Disposable sendWorkflowEvents() {
     val demoEvent =
         new GraphEvent(
+            UUID.randomUUID().toString(),
             analysisId,
             analysisState,
             analysisType,
