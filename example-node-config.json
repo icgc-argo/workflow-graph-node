@@ -1,4 +1,6 @@
 {
+  "pipelineId": "example-pipeline",
+  "nodeId": "example-node-1",
   "functionLanguage": "js",
   "filters": [
     {
