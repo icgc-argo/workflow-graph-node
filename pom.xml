@@ -6,7 +6,7 @@
     <parent>
         <groupId>org.icgc_argo</groupId>
         <artifactId>workflow-graph-parent-pom</artifactId>
-        <version>1.3.0</version>
+        <version>1.4.0</version>
     </parent>
 
     <artifactId>workflow-graph-node</artifactId>
@@ -46,7 +46,6 @@
         <dependency>
             <groupId>org.icgc_argo</groupId>
             <artifactId>workflow-graph-lib</artifactId>
-            <version>1.4.0-SNAPSHOT</version>
         </dependency>
 
         <!-- Testing -->
