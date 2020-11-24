@@ -17,6 +17,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+
+import lombok.NonNull;
 import lombok.SneakyThrows;
 import lombok.val;
 import org.icgc_argo.workflow_graph_lib.exceptions.DeadLetterQueueableException;
@@ -24,8 +26,11 @@ import org.icgc_argo.workflow_graph_lib.exceptions.RequeueableException;
 import org.icgc_argo.workflow_graph_lib.schema.GraphEvent;
 import org.icgc_argo.workflow_graph_lib.workflow.client.RdpcClient;
 import org.icgc_argo.workflowgraphnode.components.Node.EventFilterPair;
+import org.icgc_argo.workflowgraphnode.config.AppConfig;
 import org.icgc_argo.workflowgraphnode.config.NodeProperties;
+import org.icgc_argo.workflowgraphnode.service.GraphTransitAuthority;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ActiveProfiles;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -36,6 +41,7 @@ import reactor.util.function.Tuples;
 public class NodeTest {
 
   private final ObjectMapper mapper = new ObjectMapper();
+  private final GraphTransitAuthority graphTransitAuthority;
   private final TransactionManager<GraphEvent, Transaction<GraphEvent>> tm =
       new TransactionManager<>("nodeTest");
 
@@ -47,6 +53,8 @@ public class NodeTest {
     config =
         mapper.readValue(
             this.getClass().getResourceAsStream("fixtures/config.json"), NodeProperties.class);
+
+    this.graphTransitAuthority = new GraphTransitAuthority("test-pipeline", "test-node");
   }
 
   @Test
@@ -58,7 +66,7 @@ public class NodeTest {
 
     val transformer = Node.createFilterTransformer(config);
 
-    val source = Flux.fromIterable(input).transform(transformer);
+    val source = Flux.fromIterable(input).doOnNext(graphTransitAuthority::registerGraphEventTx).transform(transformer);
 
     StepVerifier.create(source)
         .expectNextMatches(tx -> tx.get().getAnalysisType().equals("variantCall"))
