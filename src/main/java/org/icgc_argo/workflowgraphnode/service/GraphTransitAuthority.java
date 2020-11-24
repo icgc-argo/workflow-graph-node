@@ -3,6 +3,8 @@ package org.icgc_argo.workflowgraphnode.service;
 import com.pivotal.rabbitmq.stream.Transaction;
 import com.pivotal.rabbitmq.stream.Transactional;
 import lombok.NonNull;
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import org.icgc_argo.workflow_graph_lib.schema.GraphEvent;
 import org.icgc_argo.workflow_graph_lib.schema.GraphRun;
 import org.icgc_argo.workflowgraphnode.config.AppConfig;
@@ -12,6 +14,7 @@ import org.springframework.stereotype.Service;
 import java.util.HashMap;
 
 @Service
+@Slf4j
 public class GraphTransitAuthority {
 
   private final String pipelineId;
@@ -40,6 +43,8 @@ public class GraphTransitAuthority {
   }
 
   public static void removeTransactionFromGTARegistry(Transactional.Identifier id) {
-    registry.remove(id);
+    val result = registry.remove(id);
+    log.debug(
+        "Transaction {} removed from GTA Registry. Thank you for transiting! GTO: {}", id, result);
   }
 }

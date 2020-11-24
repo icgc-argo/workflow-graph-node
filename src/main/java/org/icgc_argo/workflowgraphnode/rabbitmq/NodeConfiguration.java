@@ -137,7 +137,7 @@ public class NodeConfiguration {
         .doOnNext(graphTransitAuthority::registerGraphRunTx)
         .doOnNext(
             tx ->
-                log.info(
+                log.debug(
                     "GraphRun transaction with id \"{}\" registered with Graph Transit Authority! Graph Transit Object: {}",
                     tx.id(),
                     getTransactionByIdentifier(tx.id())))
@@ -179,7 +179,7 @@ public class NodeConfiguration {
                             .doOnNext(graphTransitAuthority::registerGraphEventTx)
                             .doOnNext(
                                 tx ->
-                                    log.info(
+                                    log.debug(
                                         "GraphEvent transaction with id \"{}\" registered with Graph Transit Authority! Graph Transit Object: {}",
                                         tx.id(),
                                         getTransactionByIdentifier(tx.id()))))
