@@ -38,4 +38,8 @@ public class GraphTransitAuthority {
   public static GraphTransitObject getTransactionByIdentifier(Transactional.Identifier id) {
     return registry.get(id);
   }
+
+  public static void removeTransactionFromGTARegistry(Transactional.Identifier id) {
+    registry.remove(id);
+  }
 }

@@ -34,6 +34,8 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
+import static org.icgc_argo.workflowgraphnode.service.GraphTransitAuthority.getTransactionByIdentifier;
+import static org.icgc_argo.workflowgraphnode.service.GraphTransitAuthority.removeTransactionFromGTARegistry;
 
 @Slf4j
 @Configuration
@@ -101,7 +103,11 @@ public class NodeConfiguration {
         .send(runningToCompleteStream())
         .onErrorContinue(Errors.handle())
         .doOnNext(tx -> log.info("Completed: {}", tx.get()))
-        .subscribe(Transaction::commit);
+        .subscribe(
+            tx -> {
+              tx.commit();
+              removeTransactionFromGTARegistry(tx.id());
+            });
   }
 
   public Disposable inputToRunning() {
@@ -116,7 +122,11 @@ public class NodeConfiguration {
         .then()
         .send(mergedInputStreams())
         .doOnNext(tx -> log.info("Run request confirmed by RDPC, runId: {}", tx.get().getRunId()))
-        .subscribe(Transaction::commit);
+        .subscribe(
+            tx -> {
+              tx.commit();
+              removeTransactionFromGTARegistry(tx.id());
+            });
   }
 
   private Flux<Transaction<GraphEvent>> runningToCompleteStream() {
@@ -124,6 +134,13 @@ public class NodeConfiguration {
         .declareTopology(topologyConfig.runningTopology())
         .createTransactionalConsumerStream(nodeProperties.getRunning().getQueue(), GraphRun.class)
         .receive()
+        .doOnNext(graphTransitAuthority::registerGraphRunTx)
+        .doOnNext(
+            tx ->
+                log.info(
+                    "GraphRun transaction with id \"{}\" registered with Graph Transit Authority! Graph Transit Object: {}",
+                    tx.id(),
+                    getTransactionByIdentifier(tx.id())))
         .delayElements(Duration.ofSeconds(10))
         .doOnNext(r -> log.debug("Checking status of: {}", r.get().getRunId()))
         .handle(Workflows.handleRunStatus(rdpcClient))
@@ -163,10 +180,9 @@ public class NodeConfiguration {
                             .doOnNext(
                                 tx ->
                                     log.info(
-                                        "Transaction with id \"{}\" registered with Graph Transit Authority! Graph Transit Object: {}",
+                                        "GraphEvent transaction with id \"{}\" registered with Graph Transit Authority! Graph Transit Object: {}",
                                         tx.id(),
-                                        graphTransitAuthority.getTransactionByIdentifier(
-                                            tx.id()))))
+                                        getTransactionByIdentifier(tx.id()))))
                 .collect(Collectors.toList()))
         .transform(getFilterTransformer())
         .transform(getGqlQueryTransformer())
