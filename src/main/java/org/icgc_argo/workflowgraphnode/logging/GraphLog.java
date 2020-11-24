@@ -1,37 +1,37 @@
 package org.icgc_argo.workflowgraphnode.logging;
 
+import lombok.Data;
 import lombok.NonNull;
 
 import java.time.Instant;
-import java.util.UUID;
 
 import static java.lang.String.format;
 import static org.icgc_argo.workflow_graph_lib.utils.JacksonUtils.toJsonString;
 
+@Data
 public class GraphLog {
-  private final UUID id;
-  private final Long timestamp;
   private final String log;
-  private final String pipeline;
-  private final String node;
-  private final String queue;
   private final String graphMessageId;
+  private final String queue;
+  private final String node;
+  private final String pipeline;
+  private final Long timestamp;
 
   public GraphLog(
       @NonNull String log,
-      @NonNull String pipeline,
-      @NonNull String node,
+      @NonNull String graphMessageId,
       @NonNull String queue,
-      @NonNull String graphMessageId) {
-    this.id = UUID.randomUUID();
-    this.timestamp = Instant.now().toEpochMilli();
+      @NonNull String node,
+      @NonNull String pipeline) {
     this.log = log;
-    this.pipeline = pipeline;
-    this.node = node;
-    this.queue = queue;
     this.graphMessageId = graphMessageId;
+    this.queue = queue;
+    this.node = node;
+    this.pipeline = pipeline;
+    this.timestamp = Instant.now().toEpochMilli();
   }
 
+  // TODO: Look into making this output to the console while toJSON outputs to Kafka
   @Override
   public String toString() {
     return format("%s - GraphLog: %s", this.log, this.toJSON());

@@ -1,22 +1,25 @@
 package org.icgc_argo.workflowgraphnode.logging;
 
 import com.pivotal.rabbitmq.stream.Transaction;
-import org.icgc_argo.workflow_graph_lib.schema.GraphEvent;
-import org.icgc_argo.workflow_graph_lib.schema.GraphRun;
+import lombok.val;
 
 import static java.lang.String.format;
+import static org.icgc_argo.workflowgraphnode.service.GraphTransitAuthority.getTransactionByIdentifier;
 
 public class GraphLogger {
 
-    public GraphLog createGraphEventLog(Transaction<GraphEvent> tx, String formattedMessage, Object... msgArgs) {
-        return new GraphLog(formatLog(formattedMessage, msgArgs), pipeline, node, tx.id().getName(), tx.get().getId());
-    }
+  public static GraphLog emitGraphLog(
+      Transaction<?> tx, String formattedMessage, Object... msgArgs) {
+    val gto = getTransactionByIdentifier(tx.id());
+    return new GraphLog(
+        formatLog(formattedMessage, msgArgs),
+        gto.getMessageId(),
+        gto.getQueue(),
+        gto.getNode(),
+        gto.getPipeline());
+  }
 
-    public GraphLog createGraphRunLog(Transaction<GraphRun> tx, String formattedMessage, Object... msgArgs) {
-        return new GraphLog(formatLog(formattedMessage, msgArgs), pipeline, node, tx.id().getName(), tx.get().getId());
-    }
-
-    private String formatLog(String formattedMessage, Object... msgArgs) {
-        return format(formattedMessage, msgArgs);
-    }
+  private static String formatLog(String formattedMessage, Object... msgArgs) {
+    return format(formattedMessage, msgArgs);
+  }
 }
