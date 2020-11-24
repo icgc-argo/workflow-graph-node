@@ -17,6 +17,8 @@ import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.SynchronousSink;
 
+import static org.icgc_argo.workflowgraphnode.service.GraphTransitAuthority.removeTransactionFromGTARegistry;
+
 @Slf4j
 public class Workflows {
 
@@ -53,15 +55,18 @@ public class Workflows {
             if (ROLLBACK.contains(s)) {
               log.debug("Requeueing {} with status {}", tx.get().getRunId(), s);
               tx.rollback(true);
+              removeTransactionFromGTARegistry(tx.id());
             } else if (NEXT.contains(s)) {
               log.debug("Nexting {} with status {}", tx.get().getRunId(), s);
               sink.next(tx);
             } else if (REJECT.contains(s)) {
               log.debug("Rejecting {} with status {}", tx.get().getRunId(), s);
               tx.reject();
+              removeTransactionFromGTARegistry(tx.id());
             } else if (COMMIT.contains(s)) {
               log.debug("Commiting {} with status {}", tx.get().getRunId(), s);
               tx.commit();
+              removeTransactionFromGTARegistry(tx.id());
             } else {
               log.error("Cannot map workflow status for run: {}.", tx.get().getRunId());
               sink.error(new DeadLetterQueueableException(tx.get().getRunId()));
