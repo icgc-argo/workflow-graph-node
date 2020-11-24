@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
+import java.util.UUID;
 
 @Service
 @Slf4j
@@ -43,6 +44,10 @@ public class GraphTransitAuthority {
   public void registerGraphRunTx(Transaction<GraphRun> tx) {
     registry.put(
         tx.id(), new GraphTransitObject(pipeline, node, tx.id().getName(), tx.get().getId()));
+  }
+
+  public void registerNonEntityTx(Transaction<?> tx) {
+    registry.put(tx.id(), new GraphTransitObject(pipeline, node, tx.id().getName(), "NON-ENTITY"));
   }
 
   public static GraphTransitObject getTransactionByIdentifier(Transactional.Identifier id) {

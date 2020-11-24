@@ -179,6 +179,7 @@ public class NodeTest {
         Flux.just(
                 wrapWithTransaction(invalidActivationFuncInput),
                 wrapWithTransaction(activationFuncInput))
+                .doOnNext(graphTransitAuthority::registerNonEntityTx)
             .transform(transformer);
 
     Map<String, Object> expected =
