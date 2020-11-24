@@ -3,6 +3,8 @@ package org.icgc_argo.workflowgraphnode.service;
 import com.pivotal.rabbitmq.stream.Transaction;
 import com.pivotal.rabbitmq.stream.Transactional;
 import lombok.NonNull;
+import org.icgc_argo.workflow_graph_lib.schema.GraphEvent;
+import org.icgc_argo.workflow_graph_lib.schema.GraphRun;
 import org.icgc_argo.workflowgraphnode.config.AppConfig;
 import org.icgc_argo.workflowgraphnode.model.GraphTransitObject;
 import org.springframework.context.annotation.Configuration;
@@ -22,8 +24,12 @@ public class GraphTransitAuthority {
     nodeId = appConfig.getNodeProperties().getNodeId();
   }
 
-  public void registerTransaction(Transactional.Identifier transactionId) {
-    registry.put(transactionId, new GraphTransitObject(pipelineId, nodeId, transactionId.getName()));
+  public void registerGraphEventTx(Transaction<GraphEvent> tx) {
+    registry.put(tx.id(), new GraphTransitObject(pipelineId, nodeId, tx.id().getName(), tx.get().getId()));
+  }
+
+  public void registerGraphRunTx(Transaction<GraphRun> tx) {
+    registry.put(tx.id(), new GraphTransitObject(pipelineId, nodeId, tx.id().getName(), tx.get().getId()));
   }
 
   public GraphTransitObject lookupTransactionByIdentifier(Transactional.Identifier id) {

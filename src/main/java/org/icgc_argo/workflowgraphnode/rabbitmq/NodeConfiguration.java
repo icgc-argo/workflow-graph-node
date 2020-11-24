@@ -158,7 +158,7 @@ public class NodeConfiguration {
                             .createTransactionalConsumerStream(
                                 input.getProperties().getQueue(), GraphEvent.class)
                             .receive()
-                            .doOnNext(tx -> graphTransitAuthority.registerTransaction(tx.id()))
+                            .doOnNext(graphTransitAuthority::registerGraphEventTx)
                             .doOnNext(
                                 tx ->
                                     log.info(
