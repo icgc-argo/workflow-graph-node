@@ -7,17 +7,18 @@ import org.icgc_argo.workflow_graph_lib.schema.GraphEvent;
 import org.icgc_argo.workflow_graph_lib.schema.GraphRun;
 import org.icgc_argo.workflowgraphnode.config.AppConfig;
 import org.icgc_argo.workflowgraphnode.model.GraphTransitObject;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
 
-@Configuration
+@Service
 public class GraphTransitAuthority {
 
   private final String pipelineId;
   private final String nodeId;
 
-  private final HashMap<Transactional.Identifier, GraphTransitObject> registry = new HashMap<>();
+  private static final HashMap<Transactional.Identifier, GraphTransitObject> registry =
+      new HashMap<>();
 
   public GraphTransitAuthority(@NonNull AppConfig appConfig) {
     pipelineId = appConfig.getNodeProperties().getPipelineId();
@@ -25,14 +26,16 @@ public class GraphTransitAuthority {
   }
 
   public void registerGraphEventTx(Transaction<GraphEvent> tx) {
-    registry.put(tx.id(), new GraphTransitObject(pipelineId, nodeId, tx.id().getName(), tx.get().getId()));
+    registry.put(
+        tx.id(), new GraphTransitObject(pipelineId, nodeId, tx.id().getName(), tx.get().getId()));
   }
 
   public void registerGraphRunTx(Transaction<GraphRun> tx) {
-    registry.put(tx.id(), new GraphTransitObject(pipelineId, nodeId, tx.id().getName(), tx.get().getId()));
+    registry.put(
+        tx.id(), new GraphTransitObject(pipelineId, nodeId, tx.id().getName(), tx.get().getId()));
   }
 
-  public GraphTransitObject lookupTransactionByIdentifier(Transactional.Identifier id) {
+  public static GraphTransitObject getTransactionByIdentifier(Transactional.Identifier id) {
     return registry.get(id);
   }
 }
