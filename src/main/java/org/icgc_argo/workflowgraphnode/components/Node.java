@@ -20,7 +20,7 @@ import java.util.function.Function;
 import static org.icgc_argo.workflow_graph_lib.polyglot.Polyglot.evaluateBooleanExpression;
 import static org.icgc_argo.workflow_graph_lib.polyglot.Polyglot.runMainFunctionWithData;
 import static org.icgc_argo.workflow_graph_lib.utils.JacksonUtils.toMap;
-import static org.icgc_argo.workflowgraphnode.logging.GraphLogger.emitGraphLog;
+import static org.icgc_argo.workflowgraphnode.logging.GraphLogger.graphLog;
 
 @Slf4j
 public class Node {
@@ -41,7 +41,7 @@ public class Node {
         input
             .flatMap(gqlQuery(client, query))
             .onErrorContinue(Errors.handle())
-            .doOnNext(tx -> log.info(emitGraphLog(tx, "GQL Response: %s", tx.get()).toJSON()));
+            .doOnNext(tx -> log.info(graphLog(tx, "GQL Response: %s", tx.get())));
   }
 
   public static Function<
@@ -53,7 +53,7 @@ public class Node {
         input
             .flatMap(tx -> Mono.just(activationFunction(nodeProperties).apply(tx)))
             .onErrorContinue(Errors.handle())
-            .doOnNext(tx -> log.info(emitGraphLog(tx, "Activation Result: %s", tx.get()).toJSON()));
+            .doOnNext(tx -> log.info(graphLog(tx, "Activation Result: %s", tx.get())));
   }
 
   private static boolean evaluateFilter(
@@ -139,13 +139,12 @@ public class Node {
   private static void logFilterMessage(
       String preText, Transaction<GraphEvent> tx, NodeProperties.Filter filter) {
     log.info(
-        emitGraphLog(
-                tx,
-                "%s with the following expression: \"%s\" for value: %s",
-                preText,
-                filter.getExpression(),
-                tx.get())
-            .toJSON());
+        graphLog(
+            tx,
+            "%s with the following expression: \"%s\" for value: %s",
+            preText,
+            filter.getExpression(),
+            tx.get()));
   }
 
   @Data

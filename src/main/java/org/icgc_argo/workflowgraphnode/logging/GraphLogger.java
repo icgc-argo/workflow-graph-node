@@ -8,15 +8,15 @@ import static org.icgc_argo.workflowgraphnode.service.GraphTransitAuthority.getT
 
 public class GraphLogger {
 
-  public static GraphLog emitGraphLog(
-      Transaction<?> tx, String formattedMessage, Object... msgArgs) {
+  public static String graphLog(Transaction<?> tx, String formattedMessage, Object... msgArgs) {
     val gto = getTransactionByIdentifier(tx.id());
     return new GraphLog(
-        formatLog(formattedMessage, msgArgs),
-        gto.getMessageId(),
-        gto.getQueue(),
-        gto.getNode(),
-        gto.getPipeline());
+            formatLog(formattedMessage, msgArgs),
+            gto.getMessageId(),
+            gto.getQueue(),
+            gto.getNode(),
+            gto.getPipeline())
+        .toJSON();
   }
 
   private static String formatLog(String formattedMessage, Object... msgArgs) {

@@ -5,7 +5,6 @@ import lombok.NonNull;
 
 import java.time.Instant;
 
-import static java.lang.String.format;
 import static org.icgc_argo.workflow_graph_lib.utils.JacksonUtils.toJsonString;
 
 @Data
@@ -29,12 +28,6 @@ public class GraphLog {
     this.node = node;
     this.pipeline = pipeline;
     this.timestamp = Instant.now().toEpochMilli();
-  }
-
-  // TODO: Look into making this output to the console while toJSON outputs to Kafka
-  @Override
-  public String toString() {
-    return format("%s - GraphLog: %s", this.log, this.toJSON());
   }
 
   public String toJSON() {
