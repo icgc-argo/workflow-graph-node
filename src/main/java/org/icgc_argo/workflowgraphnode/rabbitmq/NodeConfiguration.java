@@ -1,16 +1,9 @@
 package org.icgc_argo.workflowgraphnode.rabbitmq;
 
-import static java.lang.String.format;
-
 import com.pivotal.rabbitmq.RabbitEndpointService;
 import com.pivotal.rabbitmq.ReactiveRabbit;
 import com.pivotal.rabbitmq.source.Source;
 import com.pivotal.rabbitmq.stream.Transaction;
-import java.time.Duration;
-import java.util.Map;
-import java.util.function.BiConsumer;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +26,14 @@ import org.springframework.context.annotation.Configuration;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.SynchronousSink;
+
+import java.time.Duration;
+import java.util.Map;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+import static java.lang.String.format;
 
 @Slf4j
 @Configuration
@@ -164,7 +165,7 @@ public class NodeConfiguration {
                                     log.info(
                                         "Transaction with id \"{}\" registered with Graph Transit Authority! Graph Transit Object: {}",
                                         tx.id(),
-                                        graphTransitAuthority.lookupTransactionByIdentifier(
+                                        graphTransitAuthority.getTransactionByIdentifier(
                                             tx.id()))))
                 .collect(Collectors.toList()))
         .transform(getFilterTransformer())
