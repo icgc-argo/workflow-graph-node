@@ -27,6 +27,7 @@ import org.icgc_argo.workflowgraphnode.components.Node;
 import org.icgc_argo.workflowgraphnode.components.Workflows;
 import org.icgc_argo.workflowgraphnode.config.AppConfig;
 import org.icgc_argo.workflowgraphnode.config.NodeProperties;
+import org.icgc_argo.workflowgraphnode.service.GraphTransitAuthority;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import reactor.core.Disposable;
@@ -43,6 +44,7 @@ public class NodeConfiguration {
   private final NodeProperties nodeProperties;
   private final Source<Map<String, Object>> directInputSource;
   private final String schemaFullName;
+  private final GraphTransitAuthority graphTransitAuthority;
 
   @Getter(lazy = true)
   private final Function<Flux<Transaction<GraphEvent>>, Flux<Transaction<GraphEvent>>>
@@ -69,13 +71,15 @@ public class NodeConfiguration {
       @NonNull ReactiveRabbit reactiveRabbit,
       @NonNull TopologyConfiguration topologyConfig,
       @NonNull AppConfig appConfig,
-      @NonNull Source<Map<String, Object>> directInputSource) {
+      @NonNull Source<Map<String, Object>> directInputSource,
+      @NonNull GraphTransitAuthority graphTransitAuthority) {
     this.rdpcClient = rdpcClient;
     this.rabbit = rabbit;
     this.reactiveRabbit = reactiveRabbit;
     this.topologyConfig = topologyConfig;
     this.nodeProperties = appConfig.getNodeProperties();
     this.directInputSource = directInputSource;
+    this.graphTransitAuthority = graphTransitAuthority;
     this.schemaFullName =
         format(
             "%s.%s",
@@ -153,7 +157,15 @@ public class NodeConfiguration {
                             .declareTopology(input.getTopologyBuilder())
                             .createTransactionalConsumerStream(
                                 input.getProperties().getQueue(), GraphEvent.class)
-                            .receive())
+                            .receive()
+                            .doOnNext(tx -> graphTransitAuthority.registerTransaction(tx.id()))
+                            .doOnNext(
+                                tx ->
+                                    log.info(
+                                        "Transaction with id \"{}\" registered with Graph Transit Authority! Graph Transit Object: {}",
+                                        tx.id(),
+                                        graphTransitAuthority.lookupTransactionByIdentifier(
+                                            tx.id()))))
                 .collect(Collectors.toList()))
         .transform(getFilterTransformer())
         .transform(getGqlQueryTransformer())
