@@ -14,8 +14,8 @@ import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
 
-@Service
 @Slf4j
+@Service
 public class GraphTransitAuthority {
 
   private final String pipeline;
@@ -136,7 +136,7 @@ public class GraphTransitAuthority {
     }
     return result;
   }
-  
+
   private static GraphTransitObject removeTransactionFromGTARegistry(Transactional.Identifier id) {
     val result = registry.remove(id);
 
