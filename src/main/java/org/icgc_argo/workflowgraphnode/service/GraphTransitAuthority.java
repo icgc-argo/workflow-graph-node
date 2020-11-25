@@ -85,30 +85,6 @@ public class GraphTransitAuthority {
   }
 
   /**
-   * Removes the GraphTransitObject with the given id from the registry or null if there was no
-   * mapping for id
-   *
-   * @param id
-   * @return the GraphTransitObject removed with the given id
-   */
-  public static GraphTransitObject removeTransactionFromGTARegistry(Transactional.Identifier id) {
-    val result = registry.remove(id);
-
-    if (result == null) {
-      log.warn(
-          "Attempted to remove GraphTransitObject with id: \"{}\", but no such id exists in the GTA registry",
-          id);
-    } else {
-      log.debug(
-          "Transaction {} removed from GTA Registry. Thank you for transiting! GTO: {}",
-          id,
-          result);
-    }
-
-    return result;
-  }
-
-  /**
    * Commits the transaction and removes it's associated GraphTransitObject from the
    * GraphTransitAuthority registry
    *
@@ -158,6 +134,23 @@ public class GraphTransitAuthority {
           id,
           gto);
     }
+    return result;
+  }
+  
+  private static GraphTransitObject removeTransactionFromGTARegistry(Transactional.Identifier id) {
+    val result = registry.remove(id);
+
+    if (result == null) {
+      log.warn(
+              "Attempted to remove GraphTransitObject with id: \"{}\", but no such id exists in the GTA registry",
+              id);
+    } else {
+      log.debug(
+              "Transaction {} removed from GTA Registry. Thank you for transiting! GTO: {}",
+              id,
+              result);
+    }
+
     return result;
   }
 }
