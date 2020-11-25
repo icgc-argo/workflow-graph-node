@@ -35,7 +35,6 @@ import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static org.icgc_argo.workflowgraphnode.service.GraphTransitAuthority.getTransactionByIdentifier;
-import static org.icgc_argo.workflowgraphnode.service.GraphTransitAuthority.removeTransactionFromGTARegistry;
 
 @Slf4j
 @Configuration
@@ -103,11 +102,7 @@ public class NodeConfiguration {
         .send(runningToCompleteStream())
         .onErrorContinue(Errors.handle())
         .doOnNext(tx -> log.info("Completed: {}", tx.get()))
-        .subscribe(
-            tx -> {
-              tx.commit();
-              removeTransactionFromGTARegistry(tx.id());
-            });
+        .subscribe(GraphTransitAuthority::commitAndRemoveTransactionFromGTA);
   }
 
   public Disposable inputToRunning() {
@@ -122,11 +117,7 @@ public class NodeConfiguration {
         .then()
         .send(mergedInputStreams())
         .doOnNext(tx -> log.info("Run request confirmed by RDPC, runId: {}", tx.get().getRunId()))
-        .subscribe(
-            tx -> {
-              tx.commit();
-              removeTransactionFromGTARegistry(tx.id());
-            });
+        .subscribe(GraphTransitAuthority::commitAndRemoveTransactionFromGTA);
   }
 
   private Flux<Transaction<GraphEvent>> runningToCompleteStream() {
@@ -135,12 +126,6 @@ public class NodeConfiguration {
         .createTransactionalConsumerStream(nodeProperties.getRunning().getQueue(), GraphRun.class)
         .receive()
         .doOnNext(graphTransitAuthority::registerGraphRunTx)
-        .doOnNext(
-            tx ->
-                log.debug(
-                    "GraphRun transaction with id \"{}\" registered with Graph Transit Authority! Graph Transit Object: {}",
-                    tx.id(),
-                    getTransactionByIdentifier(tx.id())))
         .delayElements(Duration.ofSeconds(10))
         .doOnNext(r -> log.debug("Checking status of: {}", r.get().getRunId()))
         .handle(Workflows.handleRunStatus(rdpcClient))
@@ -176,13 +161,7 @@ public class NodeConfiguration {
                             .createTransactionalConsumerStream(
                                 input.getProperties().getQueue(), GraphEvent.class)
                             .receive()
-                            .doOnNext(graphTransitAuthority::registerGraphEventTx)
-                            .doOnNext(
-                                tx ->
-                                    log.debug(
-                                        "GraphEvent transaction with id \"{}\" registered with Graph Transit Authority! Graph Transit Object: {}",
-                                        tx.id(),
-                                        getTransactionByIdentifier(tx.id()))))
+                            .doOnNext(graphTransitAuthority::registerGraphEventTx))
                 .collect(Collectors.toList()))
         .transform(getFilterTransformer())
         .transform(getGqlQueryTransformer())

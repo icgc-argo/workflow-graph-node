@@ -44,8 +44,8 @@ public class GraphTransitAuthority {
    *     with the id.)
    */
   public GraphTransitObject registerGraphEventTx(Transaction<GraphEvent> tx) {
-    return registry.put(
-        tx.id(), new GraphTransitObject(pipeline, node, tx.id().getName(), tx.get().getId()));
+    val gto = new GraphTransitObject(pipeline, node, tx.id().getName(), tx.get().getId());
+    return putGTOinRegistry(tx.id(), gto);
   }
 
   /**
@@ -57,8 +57,8 @@ public class GraphTransitAuthority {
    *     with the id.)
    */
   public GraphTransitObject registerGraphRunTx(Transaction<GraphRun> tx) {
-    return registry.put(
-        tx.id(), new GraphTransitObject(pipeline, node, tx.id().getName(), tx.get().getId()));
+    val gto = new GraphTransitObject(pipeline, node, tx.id().getName(), tx.get().getId());
+    return putGTOinRegistry(tx.id(), gto);
   }
 
   /**
@@ -70,8 +70,8 @@ public class GraphTransitAuthority {
    *     with the id.)
    */
   public GraphTransitObject registerNonEntityTx(Transaction<?> tx) {
-    return registry.put(
-        tx.id(), new GraphTransitObject(pipeline, node, tx.id().getName(), "NON-GRAPH-ENTITY"));
+    val gto = new GraphTransitObject(pipeline, node, tx.id().getName(), "NON-GRAPH-ENTITY");
+    return putGTOinRegistry(tx.id(), gto);
   }
 
   /**
@@ -93,9 +93,71 @@ public class GraphTransitAuthority {
    */
   public static GraphTransitObject removeTransactionFromGTARegistry(Transactional.Identifier id) {
     val result = registry.remove(id);
-    log.debug(
-        "Transaction {} removed from GTA Registry. Thank you for transiting! GTO: {}", id, result);
 
+    if (result == null) {
+      log.warn(
+          "Attempted to remove GraphTransitObject with id: \"{}\", but no such id exists in the GTA registry",
+          id);
+    } else {
+      log.debug(
+          "Transaction {} removed from GTA Registry. Thank you for transiting! GTO: {}",
+          id,
+          result);
+    }
+
+    return result;
+  }
+
+  /**
+   * Commits the transaction and removes it's associated GraphTransitObject from the
+   * GraphTransitAuthority registry
+   *
+   * @param tx the transaction to be committed and for which the corresponding GTO should be removed
+   *     from the GTA
+   */
+  public static void commitAndRemoveTransactionFromGTA(Transaction<?> tx) {
+    tx.commit();
+    removeTransactionFromGTARegistry(tx.id());
+  }
+
+  /**
+   * Rejects the transaction and removes it's associated GraphTransitObject from the
+   * GraphTransitAuthority registry
+   *
+   * @param tx the transaction to be rejected and for which the corresponding GTO should be removed
+   *     from the GTA
+   */
+  public static void rejectAndRemoveTransactionFromGTA(Transaction<?> tx) {
+    tx.reject();
+    removeTransactionFromGTARegistry(tx.id());
+  }
+
+  /**
+   * Requeue (tx.rollback(true)) the transaction and removes it's associated GraphTransitObject from
+   * the GraphTransitAuthority registry
+   *
+   * @param tx the transaction that will requeue and for which the corresponding GTO should be
+   *     removed from the GTA
+   */
+  public static void requeueAndRemoveTransactionFromGTA(Transaction<?> tx) {
+    tx.rollback(true);
+    removeTransactionFromGTARegistry(tx.id());
+  }
+
+  private static GraphTransitObject putGTOinRegistry(
+      Transactional.Identifier id, GraphTransitObject gto) {
+    val result = registry.put(id, gto);
+    if (result != null) {
+      log.warn(
+          "Previously registered GraphTransitObject with id \"{}\" has been replaced before being cleared via a commit/reject/requeue action, this may be an error. Previous GTO: {}",
+          id,
+          result);
+    } else {
+      log.debug(
+          "Transaction with id \"{}\" registered with Graph Transit Authority! Graph Transit Object: {}",
+          id,
+          gto);
+    }
     return result;
   }
 }

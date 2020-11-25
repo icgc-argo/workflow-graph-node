@@ -1,11 +1,6 @@
 package org.icgc_argo.workflowgraphnode.components;
 
 import com.pivotal.rabbitmq.stream.Transaction;
-import java.util.List;
-import java.util.UUID;
-import java.util.function.BiConsumer;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.icgc_argo.workflow_graph_lib.exceptions.DeadLetterQueueableException;
@@ -17,7 +12,13 @@ import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.SynchronousSink;
 
-import static org.icgc_argo.workflowgraphnode.service.GraphTransitAuthority.removeTransactionFromGTARegistry;
+import java.util.List;
+import java.util.UUID;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+import static org.icgc_argo.workflowgraphnode.service.GraphTransitAuthority.*;
 
 @Slf4j
 public class Workflows {
@@ -54,19 +55,16 @@ public class Workflows {
           s -> {
             if (ROLLBACK.contains(s)) {
               log.debug("Requeueing {} with status {}", tx.get().getRunId(), s);
-              tx.rollback(true);
-              removeTransactionFromGTARegistry(tx.id());
+              requeueAndRemoveTransactionFromGTA(tx);
             } else if (NEXT.contains(s)) {
               log.debug("Nexting {} with status {}", tx.get().getRunId(), s);
               sink.next(tx);
             } else if (REJECT.contains(s)) {
               log.debug("Rejecting {} with status {}", tx.get().getRunId(), s);
-              tx.reject();
-              removeTransactionFromGTARegistry(tx.id());
+              rejectAndRemoveTransactionFromGTA(tx);
             } else if (COMMIT.contains(s)) {
               log.debug("Commiting {} with status {}", tx.get().getRunId(), s);
-              tx.commit();
-              removeTransactionFromGTARegistry(tx.id());
+              commitAndRemoveTransactionFromGTA(tx);
             } else {
               log.error("Cannot map workflow status for run: {}.", tx.get().getRunId());
               sink.error(new DeadLetterQueueableException(tx.get().getRunId()));
