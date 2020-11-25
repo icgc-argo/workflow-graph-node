@@ -93,11 +93,6 @@ public class AppConfig {
   private void ensureGraphSchemas() {
     val schemaManager = this.reactiveRabbit.schemaManager();
 
-    Method registerMethod =
-        SchemaManager.class.getDeclaredMethod(
-            "importRegisteredSchema", String.class, Schema.class, Integer.class);
-    registerMethod.setAccessible(true);
-
     try {
       schemaManager.fetchReadSchemaByContentType(GRAPH_EVENT_CONTENT_TYPE);
     } catch (NullPointerException e) {
