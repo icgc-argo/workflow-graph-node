@@ -1,16 +1,9 @@
 package org.icgc_argo.workflowgraphnode.rabbitmq;
 
-import static java.lang.String.format;
-
 import com.pivotal.rabbitmq.RabbitEndpointService;
 import com.pivotal.rabbitmq.ReactiveRabbit;
 import com.pivotal.rabbitmq.source.Source;
 import com.pivotal.rabbitmq.stream.Transaction;
-import java.time.Duration;
-import java.util.Map;
-import java.util.function.BiConsumer;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
@@ -27,11 +20,21 @@ import org.icgc_argo.workflowgraphnode.components.Node;
 import org.icgc_argo.workflowgraphnode.components.Workflows;
 import org.icgc_argo.workflowgraphnode.config.AppConfig;
 import org.icgc_argo.workflowgraphnode.config.NodeProperties;
+import org.icgc_argo.workflowgraphnode.service.GraphTransitAuthority;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.SynchronousSink;
+
+import java.time.Duration;
+import java.util.Map;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+import static java.lang.String.format;
+import static org.icgc_argo.workflowgraphnode.service.GraphTransitAuthority.getTransactionByIdentifier;
 
 @Slf4j
 @Configuration
@@ -43,6 +46,7 @@ public class NodeConfiguration {
   private final NodeProperties nodeProperties;
   private final Source<Map<String, Object>> directInputSource;
   private final String schemaFullName;
+  private final GraphTransitAuthority graphTransitAuthority;
 
   @Getter(lazy = true)
   private final Function<Flux<Transaction<GraphEvent>>, Flux<Transaction<GraphEvent>>>
@@ -69,13 +73,15 @@ public class NodeConfiguration {
       @NonNull ReactiveRabbit reactiveRabbit,
       @NonNull TopologyConfiguration topologyConfig,
       @NonNull AppConfig appConfig,
-      @NonNull Source<Map<String, Object>> directInputSource) {
+      @NonNull Source<Map<String, Object>> directInputSource,
+      @NonNull GraphTransitAuthority graphTransitAuthority) {
     this.rdpcClient = rdpcClient;
     this.rabbit = rabbit;
     this.reactiveRabbit = reactiveRabbit;
     this.topologyConfig = topologyConfig;
     this.nodeProperties = appConfig.getNodeProperties();
     this.directInputSource = directInputSource;
+    this.graphTransitAuthority = graphTransitAuthority;
     this.schemaFullName =
         format(
             "%s.%s",
@@ -96,7 +102,7 @@ public class NodeConfiguration {
         .send(runningToCompleteStream())
         .onErrorContinue(Errors.handle())
         .doOnNext(tx -> log.info("Completed: {}", tx.get()))
-        .subscribe(Transaction::commit);
+        .subscribe(GraphTransitAuthority::commitAndRemoveTransactionFromGTA);
   }
 
   public Disposable inputToRunning() {
@@ -111,7 +117,7 @@ public class NodeConfiguration {
         .then()
         .send(mergedInputStreams())
         .doOnNext(tx -> log.info("Run request confirmed by RDPC, runId: {}", tx.get().getRunId()))
-        .subscribe(Transaction::commit);
+        .subscribe(GraphTransitAuthority::commitAndRemoveTransactionFromGTA);
   }
 
   private Flux<Transaction<GraphEvent>> runningToCompleteStream() {
@@ -119,6 +125,7 @@ public class NodeConfiguration {
         .declareTopology(topologyConfig.runningTopology())
         .createTransactionalConsumerStream(nodeProperties.getRunning().getQueue(), GraphRun.class)
         .receive()
+        .doOnNext(graphTransitAuthority::registerGraphRunTx)
         .delayElements(Duration.ofSeconds(10))
         .doOnNext(r -> log.debug("Checking status of: {}", r.get().getRunId()))
         .handle(Workflows.handleRunStatus(rdpcClient))
@@ -153,7 +160,8 @@ public class NodeConfiguration {
                             .declareTopology(input.getTopologyBuilder())
                             .createTransactionalConsumerStream(
                                 input.getProperties().getQueue(), GraphEvent.class)
-                            .receive())
+                            .receive()
+                            .doOnNext(graphTransitAuthority::registerGraphEventTx))
                 .collect(Collectors.toList()))
         .transform(getFilterTransformer())
         .transform(getGqlQueryTransformer())

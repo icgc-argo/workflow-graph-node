@@ -38,7 +38,7 @@ public class Errors {
 
   private static void handleGraphError(GraphException exception, Transaction<?> transaction) {
     if (exception instanceof CommittableException) {
-      log.error("CommitableException when processing: {}", transaction.get().toString());
+      log.error("CommittableException when processing: {}", transaction.get().toString());
       log.error("Nested Exception", exception);
       transaction.commit();
     } else if (exception instanceof RequeueableException) {

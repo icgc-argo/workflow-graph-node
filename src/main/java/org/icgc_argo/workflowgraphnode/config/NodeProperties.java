@@ -12,6 +12,9 @@ import org.icgc_argo.workflow_graph_lib.polyglot.enums.GraphFunctionLanguage;
 @NoArgsConstructor
 public class NodeProperties {
 
+  private String pipelineId;
+  private String nodeId;
+
   private GraphFunctionLanguage functionLanguage;
   private List<Filter> filters;
   private String gqlQueryString;
