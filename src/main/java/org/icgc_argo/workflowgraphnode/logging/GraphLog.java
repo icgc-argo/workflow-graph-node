@@ -30,6 +30,10 @@ public class GraphLog {
     this.timestamp = Instant.now().toEpochMilli();
   }
 
+  /**
+   * Outputs object as JSON string using Jackson OBJECT_MAPPER.writeValueAsString()
+   * @return JSON string representation of instantiated object
+   */
   public String toJSON() {
     return toJsonString(this);
   }

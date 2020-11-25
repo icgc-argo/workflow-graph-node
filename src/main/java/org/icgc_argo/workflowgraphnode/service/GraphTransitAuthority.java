@@ -13,7 +13,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
-import java.util.UUID;
 
 @Service
 @Slf4j
@@ -36,27 +35,67 @@ public class GraphTransitAuthority {
     this.node = node;
   }
 
-  public void registerGraphEventTx(Transaction<GraphEvent> tx) {
-    registry.put(
+  /**
+   * Registers a GraphTransitObject from a GraphEvent transaction into the GTA registry
+   *
+   * @param tx the GraphEvent transaction to be registered as a GraphTransitObject
+   * @return the previous GraphTransitObject registered for this id, or null if nothing previously
+   *     registered (a null return can also indicate that the registry previously associated null
+   *     with the id.)
+   */
+  public GraphTransitObject registerGraphEventTx(Transaction<GraphEvent> tx) {
+    return registry.put(
         tx.id(), new GraphTransitObject(pipeline, node, tx.id().getName(), tx.get().getId()));
   }
 
-  public void registerGraphRunTx(Transaction<GraphRun> tx) {
-    registry.put(
+  /**
+   * Registers a GraphTransitObject from a GraphRun transaction into the GTA registry
+   *
+   * @param tx the GraphRun transaction to be registered as a GraphTransitObject
+   * @return the previous GraphTransitObject registered for this id, or null if nothing previously
+   *     registered (a null return can also indicate that the registry previously associated null
+   *     with the id.)
+   */
+  public GraphTransitObject registerGraphRunTx(Transaction<GraphRun> tx) {
+    return registry.put(
         tx.id(), new GraphTransitObject(pipeline, node, tx.id().getName(), tx.get().getId()));
   }
 
-  public void registerNonEntityTx(Transaction<?> tx) {
-    registry.put(tx.id(), new GraphTransitObject(pipeline, node, tx.id().getName(), "NON-ENTITY"));
+  /**
+   * Registers a GraphTransitObject from a non-graph-entity transaction into the GTA registry
+   *
+   * @param tx the non-graph-entity transaction to be registered as a GraphTransitObject
+   * @return the previous GraphTransitObject registered for this id, or null if nothing previously
+   *     registered (a null return can also indicate that the registry previously associated null
+   *     with the id.)
+   */
+  public GraphTransitObject registerNonEntityTx(Transaction<?> tx) {
+    return registry.put(
+        tx.id(), new GraphTransitObject(pipeline, node, tx.id().getName(), "NON-GRAPH-ENTITY"));
   }
 
+  /**
+   * Retrieve GraphTransitObject by id
+   *
+   * @param id - Transaction Identifier
+   * @return the GraphTransitObject registered with the given id
+   */
   public static GraphTransitObject getTransactionByIdentifier(Transactional.Identifier id) {
     return registry.get(id);
   }
 
-  public static void removeTransactionFromGTARegistry(Transactional.Identifier id) {
+  /**
+   * Removes the GraphTransitObject with the given id from the registry or null if there was no
+   * mapping for id
+   *
+   * @param id
+   * @return the GraphTransitObject removed with the given id
+   */
+  public static GraphTransitObject removeTransactionFromGTARegistry(Transactional.Identifier id) {
     val result = registry.remove(id);
     log.debug(
         "Transaction {} removed from GTA Registry. Thank you for transiting! GTO: {}", id, result);
+
+    return result;
   }
 }

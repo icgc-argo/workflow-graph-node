@@ -8,6 +8,13 @@ import static org.icgc_argo.workflowgraphnode.service.GraphTransitAuthority.getT
 
 public class GraphLogger {
 
+  /**
+   * Creates a JSON string representation of a GraphLog object for a GTA registered transaction
+   * @param tx the transaction to lookup in the registry
+   * @param formattedMessage - the formatted message string that will go in the `log` field of GraphLog
+   * @param msgArgs - the formatted string args to be passed to String.format
+   * @return the JSON string representation of the newly created GraphLog object
+   */
   public static String graphLog(Transaction<?> tx, String formattedMessage, Object... msgArgs) {
     val gto = getTransactionByIdentifier(tx.id());
     return new GraphLog(
