@@ -9,6 +9,6 @@ import org.slf4j.MarkerFactory;
  */
 public class GraphLogMarker {
   public static Marker getMarker() {
-    return MarkerFactory.getMarker("GraphLogRecord");
+    return MarkerFactory.getMarker("GraphLog");
   }
 }

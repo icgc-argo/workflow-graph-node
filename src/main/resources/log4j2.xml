@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="info" name="workflow-graph-node" packages="org.icgc_argo">
+    <Properties>
+        <Property name="bootstrap.servers">localhost:9092</Property>
+        <Property name="graphLog.logmarker">GraphLog</Property>
+        <Property name="kafka.topic.graphLogWarning">GraphLog.ErrorWarning</Property>
+        <Property name="kafka.topic.graphLogDebug">GraphLog.InfoDebug</Property>
+    </Properties>
+
+    <!-- Log4J2 JSONLayout objectMessageAsJsonObject not exposed through SLF4j -->
+    <Appenders>
+        <!-- Kafka Audit Appender only forwards messages with the "GraphLog" marker -->
+        <!-- We put only the message here assuming it will be formatted json-->
+        <Kafka name="kafkaWarningErrorLogAppender" topic="${kafka.topic.graphLogWarning}">
+            <PatternLayout pattern="%message%n"/>
+            <Property name="bootstrap.servers">${bootstrap.servers}</Property>
+            <MarkerFilter marker="${graphLog.logmarker}" onMatch="ACCEPT" onMismatch="DENY"/>
+        </Kafka>
+
+        <Kafka name="kafkaDebugInfoLogAppender" topic="${kafka.topic.graphLogDebug}">
+            <PatternLayout pattern="%message%n"/>
+            <Property name="bootstrap.servers">${bootstrap.servers}</Property>
+            <MarkerFilter marker="${graphLog.logmarker}" onMatch="ACCEPT" onMismatch="DENY"/>
+        </Kafka>
+
+        <Console name="stdout" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d{HH:mm:ss.SSS} stdout %highlight{%-5p} [%-7t] %F:%L - %m%n"/>
+            <MarkerFilter marker="${graphLog.logmarker}" onMatch="DENY" onMismatch="ACCEPT"/>
+        </Console>
+
+        <Console name="stderr" target="SYSTEM_ERR">
+            <PatternLayout pattern="%d{HH:mm:ss.SSS} %highlight{stderr} %highlight{%-5p} [%-7t] %F:%L - %m%n"/>
+            <Filters>
+                <ThresholdFilter level="WARN" onMatch="ACCEPT"/>
+                <MarkerFilter marker="${graphLog.logmarker}" onMatch="DENY" onMismatch="ACCEPT"/>
+            </Filters>
+        </Console>
+
+    </Appenders>
+    <Loggers>
+        <Logger name="KafkaDebugInfoLogger" level="debug">
+            <AppenderRef ref="kafkaDebugInfoLogAppender"/>
+        </Logger>
+        <Logger name="KafkaWarningErrorLogger" level="warn">
+            <AppenderRef ref="kafkaWarningErrorLogAppender"/>
+        </Logger>
+        <Root level="debug">
+            <!--stdout/stderr included for testing log4j edits-->
+            <AppenderRef ref="stdout"/>
+            <AppenderRef ref="stderr"/>
+        </Root>
+    </Loggers>
+</Configuration>
