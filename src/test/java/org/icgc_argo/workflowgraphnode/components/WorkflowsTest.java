@@ -19,6 +19,7 @@ import org.icgc_argo.workflow_graph_lib.schema.GraphRun;
 import org.icgc_argo.workflow_graph_lib.workflow.client.RdpcClient;
 import org.icgc_argo.workflow_graph_lib.workflow.model.RunRequest;
 import org.icgc_argo.workflowgraphnode.config.NodeProperties;
+import org.icgc_argo.workflowgraphnode.service.GraphTransitAuthority;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.context.ActiveProfiles;
 import reactor.core.publisher.Flux;
@@ -29,6 +30,7 @@ import reactor.test.StepVerifier;
 @ActiveProfiles("test")
 public class WorkflowsTest {
   private final NodeProperties config;
+  private final GraphTransitAuthority graphTransitAuthority;
   private final String testingUUID = UUID.randomUUID().toString();
 
   @SneakyThrows
@@ -36,6 +38,7 @@ public class WorkflowsTest {
     config =
         readValue(
             this.getClass().getResourceAsStream("fixtures/config.json"), NodeProperties.class);
+    this.graphTransitAuthority = new GraphTransitAuthority("test-pipeline", "test-node");
   }
 
   @Test
@@ -120,6 +123,7 @@ public class WorkflowsTest {
 
     val flux =
         Flux.just(transaction)
+            .doOnNext(graphTransitAuthority::registerGraphRunTx)
             .handle(Workflows.handleRunStatus(rdpcClientMock))
             .onErrorContinue(Errors.handle());
 

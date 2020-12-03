@@ -7,9 +7,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.Collection;
 import java.util.List;
 import java.util.function.Consumer;
+
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.icgc_argo.workflow_graph_lib.exceptions.*;
+import org.icgc_argo.workflowgraphnode.config.NodeProperties;
+import org.icgc_argo.workflowgraphnode.service.GraphTransitAuthority;
 import org.icgc_argo.workflowgraphnode.util.TransactionUtils;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.context.ActiveProfiles;
@@ -20,6 +24,13 @@ import reactor.test.StepVerifier;
 @ActiveProfiles("test")
 @Slf4j
 public class ErrorsTest {
+
+  private final GraphTransitAuthority graphTransitAuthority;
+
+  @SneakyThrows
+  public ErrorsTest() {
+    this.graphTransitAuthority = new GraphTransitAuthority("test-pipeline", "test-node");
+  }
 
   @Test
   public void testErrorHandler() {
@@ -43,6 +54,7 @@ public class ErrorsTest {
     val source =
         Flux.fromIterable(runnableThrowers)
             .map(TransactionUtils::wrapWithTransaction)
+            .doOnNext(graphTransitAuthority::registerNonEntityTx)
             .flatMap(
                 callableFunc -> {
                   callableFunc.get().run(); // will throw error on run
