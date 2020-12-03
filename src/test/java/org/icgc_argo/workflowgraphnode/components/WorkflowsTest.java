@@ -52,7 +52,7 @@ public class WorkflowsTest {
 
     val startRunFunc = Workflows.startRuns(rdpcClientMock);
 
-    val source = Flux.just(wrapWithTransaction(runReq)).flatMap(startRunFunc);
+    val source = Flux.just(wrapWithTransaction(runReq)).doOnNext(graphTransitAuthority::registerNonEntityTx).flatMap(startRunFunc);
 
     StepVerifier.create(source)
         .expectNextMatches(transaction -> transaction.get().getRunId().equalsIgnoreCase(runId))
@@ -90,7 +90,7 @@ public class WorkflowsTest {
 
     val handler = Workflows.handleRunStatus(rdpcClientMock);
 
-    val source = Flux.fromIterable(runIdTransactions).handle(handler);
+    val source = Flux.fromIterable(runIdTransactions).doOnNext(graphTransitAuthority::registerGraphRunTx).handle(handler);
 
     StepVerifier.create(source)
         // transaction 0 is sent to the next call unchanged in the flux handler
@@ -153,7 +153,7 @@ public class WorkflowsTest {
 
     val func = Workflows.runAnalysesToGraphEvent(rdpcClientMock);
 
-    val source = Flux.just(wrapWithTransaction(run)).flatMap(func);
+    val source = Flux.just(wrapWithTransaction(run)).doOnNext(graphTransitAuthority::registerGraphRunTx).flatMap(func);
 
     StepVerifier.create(source)
         .expectNextMatches(tx -> tx.get().equals(ge))
