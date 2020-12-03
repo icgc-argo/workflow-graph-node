@@ -8,6 +8,7 @@ import org.icgc_argo.workflow_graph_lib.schema.GraphEvent;
 import org.icgc_argo.workflow_graph_lib.schema.GraphRun;
 import org.icgc_argo.workflow_graph_lib.workflow.client.RdpcClient;
 import org.icgc_argo.workflow_graph_lib.workflow.model.RunRequest;
+import org.icgc_argo.workflowgraphnode.logging.GraphLogger;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.SynchronousSink;
@@ -18,7 +19,6 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static org.icgc_argo.workflowgraphnode.logging.GraphLogger.graphLog;
 import static org.icgc_argo.workflowgraphnode.service.GraphTransitAuthority.*;
 
 @Slf4j
@@ -50,24 +50,24 @@ public class Workflows {
   public static BiConsumer<Transaction<GraphRun>, SynchronousSink<Transaction<GraphRun>>>
       handleRunStatus(RdpcClient rdpcClient) {
     return (tx, sink) -> {
-      log.debug(graphLog(tx, "Checking status for: %s", tx.get().getRunId()));
+      GraphLogger.debug(tx, "Checking status for: %s", tx.get().getRunId());
       val status = rdpcClient.getWorkflowStatus(tx.get().getRunId()).doOnError(sink::error);
       status.subscribe(
           s -> {
             if (ROLLBACK.contains(s)) {
-              log.debug(graphLog(tx, "Requeueing %s with status %s", tx.get().getRunId(), s));
+              GraphLogger.debug(tx, "Requeueing %s with status %s", tx.get().getRunId(), s);
               requeueAndRemoveTransactionFromGTA(tx);
             } else if (NEXT.contains(s)) {
-              log.debug(graphLog(tx, "Nexting %s with status %s", tx.get().getRunId(), s));
+              GraphLogger.debug(tx, "Nexting %s with status %s", tx.get().getRunId(), s);
               sink.next(tx);
             } else if (REJECT.contains(s)) {
-              log.debug(graphLog(tx, "Rejecting %s with status %s", tx.get().getRunId(), s));
+              GraphLogger.debug(tx, "Rejecting %s with status %s", tx.get().getRunId(), s);
               rejectAndRemoveTransactionFromGTA(tx);
             } else if (COMMIT.contains(s)) {
-              log.debug(graphLog(tx, "Committing %s with status %s", tx.get().getRunId(), s));
+              GraphLogger.debug(tx, "Committing %s with status %s", tx.get().getRunId(), s);
               commitAndRemoveTransactionFromGTA(tx);
             } else {
-              log.error(graphLog(tx, "Cannot map workflow status for run: %s.", tx.get().getRunId()));
+              GraphLogger.error(tx, "Cannot map workflow status for run: %s.", tx.get().getRunId());
               sink.error(new DeadLetterQueueableException(tx.get().getRunId()));
             }
           });

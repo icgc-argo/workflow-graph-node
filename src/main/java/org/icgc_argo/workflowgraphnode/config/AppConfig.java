@@ -12,6 +12,7 @@ import org.apache.avro.Schema;
 import org.icgc_argo.workflow_graph_lib.schema.GraphEvent;
 import org.icgc_argo.workflow_graph_lib.schema.GraphRun;
 import org.icgc_argo.workflow_graph_lib.workflow.client.RdpcClient;
+import org.icgc_argo.workflowgraphnode.logging.GraphLogger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
@@ -26,7 +27,6 @@ import java.lang.reflect.Method;
 
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
-import static org.icgc_argo.workflowgraphnode.logging.GraphLogger.graphLog;
 
 @Slf4j
 @Configuration
@@ -56,16 +56,15 @@ public class AppConfig {
 
     val profiles = asList(environment.getActiveProfiles());
     if (profiles.contains("registry") && !profiles.contains("test")) {
-      log.info(graphLog(nodeProperties, "Loading workflow schema from Registry."));
+      GraphLogger.info(nodeProperties, "Loading workflow schema from Registry.");
       loadWorkflowSchemaFromRegistry();
       ensureGraphSchemas();
     } else if (!profiles.contains("test")) {
-      log.info(graphLog(nodeProperties, "Loading workflow schema from file system."));
+      GraphLogger.info(nodeProperties, "Loading workflow schema from file system.");
       loadWorkflowSchemaFromFileSystem(localSchemaPath);
     } else {
-      log.info(
-          graphLog(
-              nodeProperties, "Running with test profile enabled, will not load workflow schema."));
+      GraphLogger.info(
+          nodeProperties, "Running with test profile enabled, will not load workflow schema.");
     }
   }
 
@@ -82,13 +81,12 @@ public class AppConfig {
       throw new MissingAvroSchemaException(
           "Cannot load required avro schema for workflow parameters.");
     } else {
-      log.info(
-          graphLog(
-              nodeProperties,
-              "Successfully loaded schema %s with version %s from schema registry.",
-              schemaName,
-              schemaVersion));
-      log.info(graphLog(nodeProperties, "\n\033[32m" + schemaObj.toString(true) + "\033[39m"));
+      GraphLogger.info(
+          nodeProperties,
+          "Successfully loaded schema %s with version %s from schema registry.",
+          schemaName,
+          schemaVersion);
+      GraphLogger.info(nodeProperties, "\n\033[32m" + schemaObj.toString(true) + "\033[39m");
     }
   }
 
@@ -130,11 +128,10 @@ public class AppConfig {
     // Verify schema was loaded correctly and matches one specified in config.
     val storedSchema = schemaManager.fetchSchemaByFullName(schemaFullName);
     if (storedSchema == null || storedSchema.isError()) {
-      log.error(
-          graphLog(
-              nodeProperties,
-              "Cannot load required avro schema (%s) listed in workflow parameters from filesystem.",
-              schemaFullName));
+      GraphLogger.error(
+          nodeProperties,
+          "Cannot load required avro schema (%s) listed in workflow parameters from filesystem.",
+          schemaFullName);
       throw new MissingAvroSchemaException(schemaFullName);
     }
   }
@@ -148,28 +145,25 @@ public class AppConfig {
             "importRegisteredSchema", String.class, Schema.class, Integer.class);
     registerMethod.setAccessible(true);
 
-    log.info(
-        graphLog(
-            nodeProperties,
-            "Loading GraphRun AVRO Schema from classpath into registry with ContentType."));
+    GraphLogger.info(
+        nodeProperties,
+        "Loading GraphRun AVRO Schema from classpath into registry with ContentType.");
     registerMethod.invoke(schemaManager, contentType, schema, null);
 
     val graphRunSchemaObj = schemaManager.fetchReadSchemaByContentType(contentType);
     if (graphRunSchemaObj.isError()) {
-      log.error(
-          graphLog(
-              nodeProperties,
-              "Cannot load %s schema by Content Type, shutting down.",
-              schema.getFullName()));
+      GraphLogger.error(
+          nodeProperties,
+          "Cannot load %s schema by Content Type, shutting down.",
+          schema.getFullName());
       SpringApplication.exit(context, () -> 1);
     } else {
-      log.info(
-          graphLog(
-              nodeProperties,
-              "Successfully loaded schema %s from classpath.",
-              graphRunSchemaObj.getFullName()));
-      log.info(
-          graphLog(nodeProperties, "\n\033[32m" + graphRunSchemaObj.toString(true) + "\033[39m"));
+      GraphLogger.info(
+          nodeProperties,
+          "Successfully loaded schema %s from classpath.",
+          graphRunSchemaObj.getFullName());
+      GraphLogger.info(
+          nodeProperties, "\n\033[32m" + graphRunSchemaObj.toString(true) + "\033[39m");
     }
   }
 
