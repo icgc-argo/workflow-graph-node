@@ -34,7 +34,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
-import static org.icgc_argo.workflowgraphnode.service.GraphTransitAuthority.getTransactionByIdentifier;
+import static org.icgc_argo.workflowgraphnode.logging.GraphLogger.graphLog;
 
 @Slf4j
 @Configuration
@@ -101,7 +101,7 @@ public class NodeConfiguration {
         .then()
         .send(runningToCompleteStream())
         .onErrorContinue(Errors.handle())
-        .doOnNext(tx -> log.info("Completed: {}", tx.get()))
+        .doOnNext(tx -> log.info(graphLog(tx, "Completed: %s", tx.get())))
         .subscribe(GraphTransitAuthority::commitAndRemoveTransactionFromGTA);
   }
 
@@ -116,7 +116,10 @@ public class NodeConfiguration {
         .alwaysRetry(Duration.ofSeconds(5))
         .then()
         .send(mergedInputStreams())
-        .doOnNext(tx -> log.info("Run request confirmed by RDPC, runId: {}", tx.get().getRunId()))
+        .doOnNext(
+            tx ->
+                log.info(
+                    graphLog(tx, "Run request confirmed by RDPC, runId: %s", tx.get().getRunId())))
         .subscribe(GraphTransitAuthority::commitAndRemoveTransactionFromGTA);
   }
 
@@ -127,7 +130,7 @@ public class NodeConfiguration {
         .receive()
         .doOnNext(graphTransitAuthority::registerGraphRunTx)
         .delayElements(Duration.ofSeconds(10))
-        .doOnNext(r -> log.debug("Checking status of: {}", r.get().getRunId()))
+        .doOnNext(tx -> log.debug(graphLog(tx, "Checking status of: %s", tx.get().getRunId())))
         .handle(Workflows.handleRunStatus(rdpcClient))
         .onErrorContinue(Errors.handle())
         .flatMap(Workflows.runAnalysesToGraphEvent(rdpcClient));
@@ -135,7 +138,7 @@ public class NodeConfiguration {
 
   private Flux<Transaction<GraphRun>> mergedInputStreams() {
     return Flux.merge(directInputStream(), queuedInputStream())
-        .doOnNext(item -> log.info("Attempting to run workflow with: {}", item.get()))
+        .doOnNext(tx -> log.info(graphLog(tx, "Attempting to run workflow with: %s", tx.get())))
         .flatMap(Workflows.startRuns(rdpcClient))
         .onErrorContinue(Errors.handle());
   }
@@ -146,7 +149,7 @@ public class NodeConfiguration {
         .handle(verifyParamsWithSchema()) // verify manually provided input matches schema
         .onErrorContinue(Errors.handle())
         .transform(getInputToRunRequestHandler())
-        .doOnNext(tx -> log.info("Run request created: {}", tx.get()));
+        .doOnNext(tx -> log.info(graphLog(tx, "Run request created: %s", tx.get())));
   }
 
   private Flux<Transaction<RunRequest>> queuedInputStream() {
@@ -169,7 +172,7 @@ public class NodeConfiguration {
         .handle(verifyParamsWithSchema()) // Verify output of act-fn matches wf param schema
         .onErrorContinue(Errors.handle())
         .transform(getInputToRunRequestHandler())
-        .doOnNext(tx -> log.info("Run request created: {}", tx.get()));
+        .doOnNext(tx -> log.info(graphLog(tx, "Run request created: %s", tx.get())));
   }
 
   /**
@@ -189,7 +192,10 @@ public class NodeConfiguration {
         tx.get().forEach(newRecord::put);
         sink.next(tx);
       } catch (AvroRuntimeException e) {
-        log.error("Provided input parameters do not match parameter schema specified by workflow");
+        log.error(
+            graphLog(
+                tx,
+                "Provided input parameters do not match parameter schema specified by workflow"));
         sink.error(new DeadLetterQueueableException(e));
       } catch (Exception e) {
         sink.error(e);
