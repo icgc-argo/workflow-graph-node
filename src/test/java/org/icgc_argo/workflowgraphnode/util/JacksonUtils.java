@@ -1,8 +1,9 @@
 package org.icgc_argo.workflowgraphnode.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.io.InputStream;
 import lombok.SneakyThrows;
+
+import java.io.InputStream;
 
 public final class JacksonUtils {
   private static final ObjectMapper mapper = new ObjectMapper();

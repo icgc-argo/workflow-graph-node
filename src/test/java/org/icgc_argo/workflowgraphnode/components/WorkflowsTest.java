@@ -1,14 +1,5 @@
 package org.icgc_argo.workflowgraphnode.components;
 
-import static java.util.stream.Collectors.toList;
-import static org.icgc_argo.workflowgraphnode.util.JacksonUtils.readValue;
-import static org.icgc_argo.workflowgraphnode.util.TransactionUtils.*;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
-import java.util.List;
-import java.util.UUID;
 import lombok.SneakyThrows;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +16,16 @@ import org.springframework.test.context.ActiveProfiles;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
+
+import java.util.List;
+import java.util.UUID;
+
+import static java.util.stream.Collectors.toList;
+import static org.icgc_argo.workflowgraphnode.util.JacksonUtils.readValue;
+import static org.icgc_argo.workflowgraphnode.util.TransactionUtils.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 @Slf4j
 @ActiveProfiles("test")
