@@ -8,6 +8,8 @@ import org.icgc_argo.workflow_graph_lib.exceptions.GraphException;
 import org.icgc_argo.workflow_graph_lib.exceptions.NotAcknowledgeableException;
 import org.icgc_argo.workflow_graph_lib.exceptions.RequeueableException;
 
+import static org.icgc_argo.workflowgraphnode.logging.GraphLogger.graphLog;
+
 @Slf4j
 public class Errors {
 
@@ -38,21 +40,24 @@ public class Errors {
 
   private static void handleGraphError(GraphException exception, Transaction<?> transaction) {
     if (exception instanceof CommittableException) {
-      log.error("CommittableException when processing: {}", transaction.get().toString());
-      log.error("Nested Exception", exception);
+      log.error(
+          graphLog(transaction, "CommittableException when processing: %s", transaction.get()));
+      log.error(graphLog(transaction, "Nested Exception: %s", exception));
       transaction.commit();
     } else if (exception instanceof RequeueableException) {
-      log.error("RequeableException when processing: {}", transaction.get().toString());
-      log.error("Nested Exception", exception);
+      log.error(graphLog(transaction, "RequeableException when processing: %s", transaction.get()));
+      log.error(graphLog(transaction, "Nested Exception: %s", exception));
       transaction.rollback(true);
     } else if (exception instanceof NotAcknowledgeableException) {
-      log.error("Encountered NotAcknowledgeableException", exception);
+      log.error(graphLog(transaction, "Encountered NotAcknowledgeableException: %s", exception));
     } else {
       log.error(
-          "Putting transaction {}, with exception type: {} on dlx",
-          transaction.get().toString(),
-          exception.getClass());
-      log.error("Nested Exception", exception);
+          graphLog(
+              transaction,
+              "Putting transaction %s, with exception type: %s on dlx",
+              transaction.get(),
+              exception.getClass()));
+      log.error(graphLog(transaction, "Nested Exception: %s", exception));
       transaction.reject();
     }
   }
@@ -60,8 +65,10 @@ public class Errors {
   private static void rejectTransactionOnException(
       Throwable throwable, Transaction<?> transaction) {
     log.error(
-        "Encountered Exception that is not mappable to GraphException. Rejecting Transaction.",
-        throwable);
+        graphLog(
+            transaction,
+            "Encountered Exception that is not mappable to GraphException. Rejecting Transaction. Exception: %s",
+            throwable));
     transaction.reject();
   }
 }
