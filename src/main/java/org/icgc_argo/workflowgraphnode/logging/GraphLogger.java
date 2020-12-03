@@ -18,15 +18,11 @@ public class GraphLogger {
   public static String graphLog(Transaction<?> tx, String formattedMessage, Object... msgArgs) {
     val gto = getTransactionByIdentifier(tx.id());
     return new GraphLog(
-            formatLog(formattedMessage, msgArgs),
+            format(formattedMessage, msgArgs),
             gto.getMessageId(),
             gto.getQueue(),
             gto.getNode(),
             gto.getPipeline())
         .toJSON();
-  }
-
-  private static String formatLog(String formattedMessage, Object... msgArgs) {
-    return format(formattedMessage, msgArgs);
   }
 }

@@ -17,6 +17,7 @@ import lombok.val;
 import org.apache.avro.Schema;
 import org.icgc_argo.workflow_graph_lib.schema.*;
 import org.icgc_argo.workflow_graph_lib.workflow.client.RdpcClient;
+import org.icgc_argo.workflowgraphnode.logging.GraphLog;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
@@ -53,14 +54,14 @@ public class AppConfig {
 
     val profiles = asList(environment.getActiveProfiles());
     if (profiles.contains("registry") && !profiles.contains("test")) {
-      log.info("Loading workflow schema from Registry.");
+      log.info(appConfigGraphLog("Loading workflow schema from Registry."));
       loadWorkflowSchemaFromRegistry();
       ensureGraphSchemas();
     } else if (!profiles.contains("test")) {
-      log.info("Loading workflow schema from file system.");
+      log.info(appConfigGraphLog("Loading workflow schema from file system."));
       loadWorkflowSchemaFromFileSystem(localSchemaPath);
     } else {
-      log.info("Running with test profile enabled, will not load workflow schema.");
+      log.info(appConfigGraphLog("Running with test profile enabled, will not load workflow schema."));
     }
   }
 
@@ -78,10 +79,10 @@ public class AppConfig {
           "Cannot load required avro schema for workflow parameters.");
     } else {
       log.info(
-          "Successfully loaded schema {} with version {} from schema registry.",
+              appConfigGraphLog("Successfully loaded schema %s with version %s from schema registry.",
           schemaName,
-          schemaVersion);
-      log.info("\n\033[32m" + schemaObj.toString(true) + "\033[39m");
+          schemaVersion));
+      log.info(appConfigGraphLog("\n\033[32m" + schemaObj.toString(true) + "\033[39m"));
     }
   }
 
@@ -123,7 +124,7 @@ public class AppConfig {
     // Verify schema was loaded correctly and matches one specified in config.
     val storedSchema = schemaManager.fetchSchemaByFullName(schemaFullName);
     if (storedSchema == null || storedSchema.isError()) {
-      log.error("Cannot load required avro schema listed in workflow parameters from filesystem.");
+      log.error(appConfigGraphLog("Cannot load required avro schema (%s) listed in workflow parameters from filesystem.", schemaFullName));
       throw new MissingAvroSchemaException(schemaFullName);
     }
   }
@@ -137,17 +138,27 @@ public class AppConfig {
             "importRegisteredSchema", String.class, Schema.class, Integer.class);
     registerMethod.setAccessible(true);
 
-    log.info("Loading GraphRun AVRO Schema from classpath into registry with ContentType.");
+    log.info(appConfigGraphLog("Loading GraphRun AVRO Schema from classpath into registry with ContentType."));
     registerMethod.invoke(schemaManager, contentType, schema, null);
 
     val graphRunSchemaObj = schemaManager.fetchReadSchemaByContentType(contentType);
     if (graphRunSchemaObj.isError()) {
-      log.error("Cannot load {} schema by Content Type, shutting down.", schema.getFullName());
+      log.error(appConfigGraphLog("Cannot load %s schema by Content Type, shutting down.", schema.getFullName()));
       SpringApplication.exit(context, () -> 1);
     } else {
-      log.info("Successfully loaded schema {} from classpath.", graphRunSchemaObj.getFullName());
-      log.info("\n\033[32m" + graphRunSchemaObj.toString(true) + "\033[39m");
+      log.info(appConfigGraphLog("Successfully loaded schema %s from classpath.", graphRunSchemaObj.getFullName()));
+      log.info(appConfigGraphLog("\n\033[32m" + graphRunSchemaObj.toString(true) + "\033[39m"));
     }
+  }
+
+  private String appConfigGraphLog(String formattedMessage, Object... msgArgs) {
+    return new GraphLog(
+            format(formattedMessage, msgArgs),
+            "",
+           "",
+            nodeProperties.getNodeId(),
+            nodeProperties.getPipelineId())
+        .toJSON();
   }
 
   @Bean
