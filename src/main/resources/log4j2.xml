@@ -1,31 +1,34 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Configuration status="info" name="workflow-graph-node" packages="org.icgc_argo">
     <Properties>
-        <Property name="bootstrap.servers">localhost:9092</Property>
-        <Property name="graphLog.logmarker">GraphLog</Property>
-        <Property name="kafka.topic.graphLogDebug">GraphLog.InfoDebug</Property>
-        <Property name="kafka.topic.graphLogWarning">GraphLog.ErrorWarning</Property>
+        <Property name="graphLogMarker">GraphLog</Property>
+        <Property name="kafka.brokers">localhost:9092</Property>
+        <Property name="kafka.debugInfoTopic">GraphLog.InfoDebug</Property>
+        <Property name="kafka.warningErrorTopic">GraphLog.ErrorWarning</Property>
+        <Property name="logging.level.root">INFO</Property>
+         <Property name="logging.level.org.icgc_argo.workflowgraphnode">DEBUG</Property>
+         <Property name="logging.level.com.pivotal.rabbitmq.stream">INFO</Property>
     </Properties>
 
     <!-- Log4J2 JSONLayout objectMessageAsJsonObject not exposed through SLF4j -->
     <Appenders>
         <!-- Kafka Audit Appender only forwards messages with the "GraphLog" marker -->
         <!-- We put only the message here assuming it will be formatted json-->
-        <Kafka name="kafkaDebugInfoLogAppender" topic="${kafka.topic.graphLogDebug}">
+        <Kafka name="kafkaDebugInfoLogAppender" topic="${kafka.debugInfoTopic}">
             <PatternLayout pattern="%message%n"/>
-            <Property name="bootstrap.servers">${bootstrap.servers}</Property>
+            <Property name="bootstrap.servers">${kafka.brokers}</Property>
             <Filters>
                 <ThresholdFilter level="WARN" onMatch="DENY" onMismatch="NEUTRAL"/>
-                <MarkerFilter marker="${graphLog.logmarker}" onMatch="ACCEPT" onMismatch="DENY"/>
+                <MarkerFilter marker="${graphLogMarker}" onMatch="ACCEPT" onMismatch="DENY"/>
             </Filters>
         </Kafka>
 
-        <Kafka name="kafkaWarningErrorLogAppender" topic="${kafka.topic.graphLogWarning}">
+        <Kafka name="kafkaWarningErrorLogAppender" topic="${kafka.warningErrorTopic}">
             <PatternLayout pattern="%message%n"/>
-            <Property name="bootstrap.servers">${bootstrap.servers}</Property>
+            <Property name="bootstrap.servers">${kafka.brokers}</Property>
             <Filters>
                 <ThresholdFilter level="WARN" onMatch="NEUTRAL" onMismatch="DENY"/>
-                <MarkerFilter marker="${graphLog.logmarker}" onMatch="ACCEPT" onMismatch="DENY"/>
+                <MarkerFilter marker="${graphLogMarker}" onMatch="ACCEPT" onMismatch="DENY"/>
             </Filters>
         </Kafka>
 
@@ -41,14 +44,16 @@
 
     </Appenders>
     <Loggers>
-        <Root level="INFO">
+        <Root level="${logging.level.root}">
             <AppenderRef ref="kafkaDebugInfoLogAppender"/>
             <AppenderRef ref="kafkaWarningErrorLogAppender"/>
             <!--stdout/stderr included for testing log4j edits-->
             <AppenderRef ref="stdout"/>
             <AppenderRef ref="stderr"/>
         </Root>
+        <Logger name="org.icgc_argo.workflowgraphnode" level="${logging.level.org.icgc_argo.workflowgraphnode}"/>
+        <Logger name="com.pivotal.rabbitmq.stream" level="${logging.level.com.pivotal.rabbitmq.stream}"/>
+        <!-- Do not let org.apache.kafka log to a Kafka appender on DEBUG level. That will cause recursive logging -->
         <Logger name="org.apache.kafka" level="warn"/>
-        <Logger name="org.icgc_argo.workflowgraphnode" level="debug"/>
     </Loggers>
 </Configuration>
