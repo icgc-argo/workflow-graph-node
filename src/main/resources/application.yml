@@ -6,11 +6,6 @@ rabbit:
       port: 5672
       managementPort:
 
-kafka:
-  brokers: localhost:9092
-  debugInfoTopic: GraphLog.InfoDebug
-  warningErrorTopic: GraphLog.ErrorWarning
-
 logging.level.root: INFO
 
 rdpc:
