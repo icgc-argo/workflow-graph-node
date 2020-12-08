@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pivotal.rabbitmq.source.Sender;
 import lombok.Data;
 import lombok.NonNull;
-import lombok.extern.slf4j.Slf4j;
 import org.icgc_argo.workflowgraphnode.model.PipeStatus;
 import org.icgc_argo.workflowgraphnode.service.PipelineManager;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,7 +17,6 @@ import reactor.core.publisher.Mono;
 
 import java.util.Map;
 
-@Slf4j
 @RestController
 public class NodeController {
 

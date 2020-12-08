@@ -1,7 +1,6 @@
 package org.icgc_argo.workflowgraphnode.components;
 
 import com.pivotal.rabbitmq.stream.Transaction;
-import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.icgc_argo.workflow_graph_lib.exceptions.DeadLetterQueueableException;
 import org.icgc_argo.workflow_graph_lib.schema.GraphEvent;
@@ -21,7 +20,6 @@ import java.util.stream.Collectors;
 
 import static org.icgc_argo.workflowgraphnode.service.GraphTransitAuthority.*;
 
-@Slf4j
 public class Workflows {
 
   /** Constants */

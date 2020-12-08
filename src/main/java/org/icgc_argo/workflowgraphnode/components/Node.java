@@ -3,7 +3,6 @@ package org.icgc_argo.workflowgraphnode.components;
 import com.pivotal.rabbitmq.stream.Transaction;
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.extern.slf4j.Slf4j;
 import org.icgc_argo.workflow_graph_lib.polyglot.enums.GraphFunctionLanguage;
 import org.icgc_argo.workflow_graph_lib.schema.GraphEvent;
 import org.icgc_argo.workflow_graph_lib.workflow.client.RdpcClient;
@@ -22,7 +21,7 @@ import static org.icgc_argo.workflow_graph_lib.polyglot.Polyglot.evaluateBoolean
 import static org.icgc_argo.workflow_graph_lib.polyglot.Polyglot.runMainFunctionWithData;
 import static org.icgc_argo.workflow_graph_lib.utils.JacksonUtils.toMap;
 
-@Slf4j
+
 public class Node {
   public static Function<Flux<Transaction<GraphEvent>>, Flux<Transaction<GraphEvent>>>
       createFilterTransformer(NodeProperties nodeProperties) {

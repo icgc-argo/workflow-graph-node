@@ -1,7 +1,6 @@
 package org.icgc_argo.workflowgraphnode.components;
 
 import lombok.SneakyThrows;
-import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.icgc_argo.workflow_graph_lib.exceptions.CommittableException;
 import org.icgc_argo.workflow_graph_lib.exceptions.DeadLetterQueueableException;
@@ -24,7 +23,6 @@ import static org.icgc_argo.workflowgraphnode.util.TransactionUtils.*;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @ActiveProfiles("test")
-@Slf4j
 public class ErrorsTest {
 
   private final GraphTransitAuthority graphTransitAuthority;

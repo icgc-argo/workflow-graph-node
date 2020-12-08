@@ -6,7 +6,6 @@ import com.pivotal.rabbitmq.schema.MissingAvroSchemaException;
 import com.pivotal.rabbitmq.schema.SchemaManager;
 import lombok.Getter;
 import lombok.SneakyThrows;
-import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.apache.avro.Schema;
 import org.icgc_argo.workflow_graph_lib.schema.GraphEvent;
@@ -28,7 +27,6 @@ import java.lang.reflect.Method;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 
-@Slf4j
 @Configuration
 public class AppConfig {
   private static final String GRAPH_EVENT_CONTENT_TYPE = "application/vnd.GraphEvent+avro";

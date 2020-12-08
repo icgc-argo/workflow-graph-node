@@ -2,7 +2,6 @@ package org.icgc_argo.workflowgraphnode.service;
 
 import lombok.NonNull;
 import lombok.SneakyThrows;
-import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.icgc_argo.workflowgraphnode.config.AppConfig;
 import org.icgc_argo.workflowgraphnode.config.NodeProperties;
@@ -20,7 +19,6 @@ import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
-@Slf4j
 @Configuration
 public class PipelineManager {
 
