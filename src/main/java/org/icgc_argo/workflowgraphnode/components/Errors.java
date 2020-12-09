@@ -1,12 +1,16 @@
 package org.icgc_argo.workflowgraphnode.components;
 
 import com.pivotal.rabbitmq.stream.Transaction;
-import java.util.function.BiConsumer;
 import lombok.extern.slf4j.Slf4j;
 import org.icgc_argo.workflow_graph_lib.exceptions.CommittableException;
 import org.icgc_argo.workflow_graph_lib.exceptions.GraphException;
 import org.icgc_argo.workflow_graph_lib.exceptions.NotAcknowledgeableException;
 import org.icgc_argo.workflow_graph_lib.exceptions.RequeueableException;
+import org.icgc_argo.workflowgraphnode.logging.GraphLogger;
+
+import java.util.function.BiConsumer;
+
+import static org.icgc_argo.workflowgraphnode.service.GraphTransitAuthority.*;
 
 @Slf4j
 public class Errors {
@@ -38,30 +42,32 @@ public class Errors {
 
   private static void handleGraphError(GraphException exception, Transaction<?> transaction) {
     if (exception instanceof CommittableException) {
-      log.error("CommittableException when processing: {}", transaction.get().toString());
-      log.error("Nested Exception", exception);
-      transaction.commit();
+      GraphLogger.error(transaction, "CommittableException when processing: %s", transaction.get());
+      GraphLogger.error(transaction, "Nested Exception: %s", exception);
+      commitAndRemoveTransactionFromGTA(transaction);
     } else if (exception instanceof RequeueableException) {
-      log.error("RequeableException when processing: {}", transaction.get().toString());
-      log.error("Nested Exception", exception);
-      transaction.rollback(true);
+      GraphLogger.error(transaction, "RequeableException when processing: %s", transaction.get());
+      GraphLogger.error(transaction, "Nested Exception: %s", exception);
+      requeueAndRemoveTransactionFromGTA(transaction);
     } else if (exception instanceof NotAcknowledgeableException) {
-      log.error("Encountered NotAcknowledgeableException", exception);
+      GraphLogger.error(transaction, "Encountered NotAcknowledgeableException: %s", exception);
     } else {
-      log.error(
-          "Putting transaction {}, with exception type: {} on dlx",
-          transaction.get().toString(),
+      GraphLogger.error(
+          transaction,
+          "Putting transaction %s, with exception type: %s on dlx",
+          transaction.get(),
           exception.getClass());
-      log.error("Nested Exception", exception);
-      transaction.reject();
+      GraphLogger.error(transaction, "Nested Exception: %s", exception);
+      rejectAndRemoveTransactionFromGTA(transaction);
     }
   }
 
   private static void rejectTransactionOnException(
       Throwable throwable, Transaction<?> transaction) {
-    log.error(
-        "Encountered Exception that is not mappable to GraphException. Rejecting Transaction.",
+    GraphLogger.error(
+        transaction,
+        "Encountered Exception that is not mappable to GraphException. Rejecting Transaction. Exception: %s",
         throwable);
-    transaction.reject();
+    rejectAndRemoveTransactionFromGTA(transaction);
   }
 }

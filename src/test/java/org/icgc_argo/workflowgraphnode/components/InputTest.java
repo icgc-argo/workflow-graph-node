@@ -1,27 +1,32 @@
 package org.icgc_argo.workflowgraphnode.components;
 
-import static org.icgc_argo.workflowgraphnode.util.JacksonUtils.readValue;
-import static org.icgc_argo.workflowgraphnode.util.TransactionUtils.*;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.util.Map;
 import lombok.SneakyThrows;
 import lombok.val;
 import org.icgc_argo.workflowgraphnode.config.NodeProperties;
+import org.icgc_argo.workflowgraphnode.service.GraphTransitAuthority;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.context.ActiveProfiles;
 import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;
 
+import java.util.Map;
+
+import static org.icgc_argo.workflowgraphnode.util.JacksonUtils.readValue;
+import static org.icgc_argo.workflowgraphnode.util.TransactionUtils.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 @ActiveProfiles("test")
 public class InputTest {
   private final NodeProperties config;
+  private final GraphTransitAuthority graphTransitAuthority;
 
   @SneakyThrows
   public InputTest() {
     config =
         readValue(
             this.getClass().getResourceAsStream("fixtures/config.json"), NodeProperties.class);
+
+    this.graphTransitAuthority = new GraphTransitAuthority("test-pipeline", "test-node");
   }
 
   @Test
@@ -63,7 +68,10 @@ public class InputTest {
 
     val wfParamTransaction = wrapWithTransaction(wfParams);
 
-    val source = Flux.just(wfParamTransaction).transform(handler);
+    val source =
+        Flux.just(wfParamTransaction)
+            .doOnNext(graphTransitAuthority::registerNonEntityTx)
+            .transform(handler);
 
     StepVerifier.create(source)
         .expectComplete()

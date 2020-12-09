@@ -1,17 +1,7 @@
 package org.icgc_argo.workflowgraphnode.components;
 
-import static java.util.stream.Collectors.toList;
-import static org.icgc_argo.workflowgraphnode.util.JacksonUtils.readValue;
-import static org.icgc_argo.workflowgraphnode.util.TransactionUtils.*;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
-import java.util.List;
-import java.util.UUID;
 import lombok.SneakyThrows;
 import lombok.Value;
-import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.icgc_argo.workflow_graph_lib.exceptions.RequeueableException;
 import org.icgc_argo.workflow_graph_lib.schema.GraphEvent;
@@ -19,16 +9,27 @@ import org.icgc_argo.workflow_graph_lib.schema.GraphRun;
 import org.icgc_argo.workflow_graph_lib.workflow.client.RdpcClient;
 import org.icgc_argo.workflow_graph_lib.workflow.model.RunRequest;
 import org.icgc_argo.workflowgraphnode.config.NodeProperties;
+import org.icgc_argo.workflowgraphnode.service.GraphTransitAuthority;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.context.ActiveProfiles;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
-@Slf4j
+import java.util.List;
+import java.util.UUID;
+
+import static java.util.stream.Collectors.toList;
+import static org.icgc_argo.workflowgraphnode.util.JacksonUtils.readValue;
+import static org.icgc_argo.workflowgraphnode.util.TransactionUtils.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 @ActiveProfiles("test")
 public class WorkflowsTest {
   private final NodeProperties config;
+  private final GraphTransitAuthority graphTransitAuthority;
   private final String testingUUID = UUID.randomUUID().toString();
 
   @SneakyThrows
@@ -36,6 +37,7 @@ public class WorkflowsTest {
     config =
         readValue(
             this.getClass().getResourceAsStream("fixtures/config.json"), NodeProperties.class);
+    this.graphTransitAuthority = new GraphTransitAuthority("test-pipeline", "test-node");
   }
 
   @Test
@@ -49,7 +51,10 @@ public class WorkflowsTest {
 
     val startRunFunc = Workflows.startRuns(rdpcClientMock);
 
-    val source = Flux.just(wrapWithTransaction(runReq)).flatMap(startRunFunc);
+    val source =
+        Flux.just(wrapWithTransaction(runReq))
+            .doOnNext(graphTransitAuthority::registerNonEntityTx)
+            .flatMap(startRunFunc);
 
     StepVerifier.create(source)
         .expectNextMatches(transaction -> transaction.get().getRunId().equalsIgnoreCase(runId))
@@ -87,7 +92,10 @@ public class WorkflowsTest {
 
     val handler = Workflows.handleRunStatus(rdpcClientMock);
 
-    val source = Flux.fromIterable(runIdTransactions).handle(handler);
+    val source =
+        Flux.fromIterable(runIdTransactions)
+            .doOnNext(graphTransitAuthority::registerGraphRunTx)
+            .handle(handler);
 
     StepVerifier.create(source)
         // transaction 0 is sent to the next call unchanged in the flux handler
@@ -120,6 +128,7 @@ public class WorkflowsTest {
 
     val flux =
         Flux.just(transaction)
+            .doOnNext(graphTransitAuthority::registerGraphRunTx)
             .handle(Workflows.handleRunStatus(rdpcClientMock))
             .onErrorContinue(Errors.handle());
 
@@ -149,7 +158,10 @@ public class WorkflowsTest {
 
     val func = Workflows.runAnalysesToGraphEvent(rdpcClientMock);
 
-    val source = Flux.just(wrapWithTransaction(run)).flatMap(func);
+    val source =
+        Flux.just(wrapWithTransaction(run))
+            .doOnNext(graphTransitAuthority::registerGraphRunTx)
+            .flatMap(func);
 
     StepVerifier.create(source)
         .expectNextMatches(tx -> tx.get().equals(ge))
