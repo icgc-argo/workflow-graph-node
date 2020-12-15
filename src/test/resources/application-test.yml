@@ -18,3 +18,15 @@ spring:
 node:
   localSchemaPath: schema/WorkflowParamsTest.avsc
   jsonConfigPath: example-node-config.json
+
+---
+
+spring:
+  profiles: oauth
+
+oauth:
+  clientCredentials:
+    clientId: foo
+    clientSecret: bar
+    tokenUri: https://example.com
+    publicKeyUri: https://example.com

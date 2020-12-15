@@ -17,6 +17,7 @@ import org.apache.avro.Schema;
 import org.icgc_argo.workflow_graph_lib.schema.GraphEvent;
 import org.icgc_argo.workflow_graph_lib.schema.GraphRun;
 import org.icgc_argo.workflow_graph_lib.workflow.client.RdpcClient;
+import org.icgc_argo.workflow_graph_lib.workflow.client.oauth.ClientCredentials;
 import org.icgc_argo.workflowgraphnode.logging.GraphLogger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,6 +25,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.core.env.Environment;
 
 @Configuration
@@ -165,7 +167,14 @@ public class AppConfig {
   }
 
   @Bean
+  @Profile("!oauth")
   public RdpcClient createRdpcClient() {
     return new RdpcClient(rdpcUrl);
+  }
+
+  @Bean
+  @Profile("oauth")
+  public RdpcClient createRdpcClientWithAuth(ClientCredentials clientCredentials) {
+    return new RdpcClient(rdpcUrl, 60L, clientCredentials);
   }
 }
