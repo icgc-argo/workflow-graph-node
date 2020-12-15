@@ -1,11 +1,10 @@
 package org.icgc_argo.workflowgraphnode.logging;
 
-import lombok.Data;
-import lombok.NonNull;
+import static org.icgc_argo.workflow_graph_lib.utils.JacksonUtils.toJsonString;
 
 import java.time.Instant;
-
-import static org.icgc_argo.workflow_graph_lib.utils.JacksonUtils.toJsonString;
+import lombok.Data;
+import lombok.NonNull;
 
 @Data
 public class GraphLog {
@@ -32,6 +31,7 @@ public class GraphLog {
 
   /**
    * Outputs object as JSON string using Jackson OBJECT_MAPPER.writeValueAsString()
+   *
    * @return JSON string representation of instantiated object
    */
   public String toJSON() {

@@ -1,10 +1,22 @@
 package org.icgc_argo.workflowgraphnode.components;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.icgc_argo.workflowgraphnode.util.TransactionUtils.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pivotal.rabbitmq.stream.Transaction;
 import com.pivotal.rabbitmq.stream.TransactionManager;
+import java.io.InputStream;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
 import lombok.SneakyThrows;
 import lombok.val;
 import org.icgc_argo.workflow_graph_lib.exceptions.DeadLetterQueueableException;
@@ -20,19 +32,6 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 import reactor.util.function.Tuples;
-
-import java.io.InputStream;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.function.Consumer;
-import java.util.stream.Collectors;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.icgc_argo.workflowgraphnode.util.TransactionUtils.*;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 @ActiveProfiles("test")
 public class NodeTest {
@@ -63,7 +62,10 @@ public class NodeTest {
 
     val transformer = Node.createFilterTransformer(config);
 
-    val source = Flux.fromIterable(input).doOnNext(graphTransitAuthority::registerGraphEventTx).transform(transformer);
+    val source =
+        Flux.fromIterable(input)
+            .doOnNext(graphTransitAuthority::registerGraphEventTx)
+            .transform(transformer);
 
     StepVerifier.create(source)
         .expectNextMatches(tx -> tx.get().getAnalysisType().equals("variantCall"))
@@ -176,7 +178,7 @@ public class NodeTest {
         Flux.just(
                 wrapWithTransaction(invalidActivationFuncInput),
                 wrapWithTransaction(activationFuncInput))
-                .doOnNext(graphTransitAuthority::registerNonEntityTx)
+            .doOnNext(graphTransitAuthority::registerNonEntityTx)
             .transform(transformer);
 
     Map<String, Object> expected =

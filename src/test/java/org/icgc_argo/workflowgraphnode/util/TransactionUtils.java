@@ -2,12 +2,11 @@ package org.icgc_argo.workflowgraphnode.util;
 
 import com.pivotal.rabbitmq.stream.Transaction;
 import com.pivotal.rabbitmq.stream.Transactional;
-import lombok.SneakyThrows;
-import lombok.val;
-
 import java.lang.reflect.Field;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
+import lombok.SneakyThrows;
+import lombok.val;
 
 public final class TransactionUtils {
   private static final Field receivedRejectedField = getReceivedRejectedField();

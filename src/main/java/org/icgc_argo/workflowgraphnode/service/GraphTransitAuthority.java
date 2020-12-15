@@ -2,6 +2,7 @@ package org.icgc_argo.workflowgraphnode.service;
 
 import com.pivotal.rabbitmq.stream.Transaction;
 import com.pivotal.rabbitmq.stream.Transactional;
+import java.util.HashMap;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
@@ -11,8 +12,6 @@ import org.icgc_argo.workflowgraphnode.config.AppConfig;
 import org.icgc_argo.workflowgraphnode.model.GraphTransitObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
-import java.util.HashMap;
 
 @Slf4j
 @Service
@@ -142,13 +141,13 @@ public class GraphTransitAuthority {
 
     if (result == null) {
       log.warn(
-              "Attempted to remove GraphTransitObject with id: \"{}\", but no such id exists in the GTA registry",
-              id);
+          "Attempted to remove GraphTransitObject with id: \"{}\", but no such id exists in the GTA registry",
+          id);
     } else {
       log.debug(
-              "Transaction {} removed from GTA Registry. Thank you for transiting! GTO: {}",
-              id,
-              result);
+          "Transaction {} removed from GTA Registry. Thank you for transiting! GTO: {}",
+          id,
+          result);
     }
 
     return result;

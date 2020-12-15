@@ -1,12 +1,11 @@
 package org.icgc_argo.workflowgraphnode.config;
 
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.icgc_argo.workflow_graph_lib.polyglot.enums.GraphFunctionLanguage;
-
-import java.util.List;
 
 @Data
 @AllArgsConstructor

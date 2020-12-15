@@ -1,14 +1,13 @@
 package org.icgc_argo.workflowgraphnode.components;
 
 import com.pivotal.rabbitmq.stream.Transaction;
+import java.util.Map;
+import java.util.function.Function;
 import org.icgc_argo.workflow_graph_lib.workflow.model.RunRequest;
 import org.icgc_argo.workflow_graph_lib.workflow.model.WorkflowEngineParams;
 import org.icgc_argo.workflowgraphnode.components.exceptions.WorkflowParamsFunctionException;
 import org.icgc_argo.workflowgraphnode.config.NodeProperties;
 import reactor.core.publisher.Flux;
-
-import java.util.Map;
-import java.util.function.Function;
 
 public class Input {
 
