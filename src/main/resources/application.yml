@@ -58,3 +58,15 @@ spring:
 
 logging:
   config: classpath:log4j2-kafka.xml
+
+---
+
+spring:
+  profiles: oauth
+
+oauth:
+  clientCredentials:
+    clientId: foo
+    clientSecret: bar
+    tokenUri: https://example.com
+    publicKeyUri: https://example.com
