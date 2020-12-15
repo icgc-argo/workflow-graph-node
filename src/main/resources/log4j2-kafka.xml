@@ -3,8 +3,8 @@
     <Properties>
         <Property name="graphLogMarker">$${env:LOG4J2_GRAPH_LOG_MARKER:-GraphLog}</Property>
         <Property name="kafka.brokers">$${env:LOG4J2_KAFKA_BROKERS:-localhost:9092}</Property>
-        <Property name="kafka.infoDebugTopic">$${env:LOG4J2_KAFKA_INFO_DEBUG_TOPIC:-graphlog_infoDebug}</Property>
-        <Property name="kafka.errorWarningTopic">$${env:LOG4J2_KAFKA_ERROR_WARNING_TOPIC:-graphlog_errorWarning}
+        <Property name="kafka.infoDebugTopic">$${env:LOG4J2_KAFKA_INFO_DEBUG_TOPIC:-graphlog_info_debug}</Property>
+        <Property name="kafka.errorWarningTopic">$${env:LOG4J2_KAFKA_ERROR_WARNING_TOPIC:-graphlog_error_warning}
         </Property>
     </Properties>
 
