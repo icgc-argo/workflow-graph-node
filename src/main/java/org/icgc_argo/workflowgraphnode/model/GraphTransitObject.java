@@ -1,8 +1,8 @@
 package org.icgc_argo.workflowgraphnode.model;
 
-import lombok.Data;
-
 import static java.lang.String.format;
+
+import lombok.Data;
 
 @Data
 public class GraphTransitObject {
@@ -13,6 +13,7 @@ public class GraphTransitObject {
 
   @Override
   public String toString() {
-    return format("{ pipeline: %s, node: %s, queue: %s, messageId: %s }", pipeline, node, queue, messageId);
+    return format(
+        "{ pipeline: %s, node: %s, queue: %s, messageId: %s }", pipeline, node, queue, messageId);
   }
 }

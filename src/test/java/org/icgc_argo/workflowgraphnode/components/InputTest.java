@@ -1,5 +1,10 @@
 package org.icgc_argo.workflowgraphnode.components;
 
+import static org.icgc_argo.workflowgraphnode.util.JacksonUtils.readValue;
+import static org.icgc_argo.workflowgraphnode.util.TransactionUtils.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.Map;
 import lombok.SneakyThrows;
 import lombok.val;
 import org.icgc_argo.workflowgraphnode.config.NodeProperties;
@@ -8,12 +13,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.test.context.ActiveProfiles;
 import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;
-
-import java.util.Map;
-
-import static org.icgc_argo.workflowgraphnode.util.JacksonUtils.readValue;
-import static org.icgc_argo.workflowgraphnode.util.TransactionUtils.*;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @ActiveProfiles("test")
 public class InputTest {

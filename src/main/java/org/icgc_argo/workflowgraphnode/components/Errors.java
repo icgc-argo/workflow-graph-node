@@ -1,16 +1,15 @@
 package org.icgc_argo.workflowgraphnode.components;
 
+import static org.icgc_argo.workflowgraphnode.service.GraphTransitAuthority.*;
+
 import com.pivotal.rabbitmq.stream.Transaction;
+import java.util.function.BiConsumer;
 import lombok.extern.slf4j.Slf4j;
 import org.icgc_argo.workflow_graph_lib.exceptions.CommittableException;
 import org.icgc_argo.workflow_graph_lib.exceptions.GraphException;
 import org.icgc_argo.workflow_graph_lib.exceptions.NotAcknowledgeableException;
 import org.icgc_argo.workflow_graph_lib.exceptions.RequeueableException;
 import org.icgc_argo.workflowgraphnode.logging.GraphLogger;
-
-import java.util.function.BiConsumer;
-
-import static org.icgc_argo.workflowgraphnode.service.GraphTransitAuthority.*;
 
 @Slf4j
 public class Errors {

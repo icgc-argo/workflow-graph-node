@@ -1,9 +1,15 @@
 package org.icgc_argo.workflowgraphnode.config;
 
+import static java.lang.String.format;
+import static java.util.Arrays.asList;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pivotal.rabbitmq.ReactiveRabbit;
 import com.pivotal.rabbitmq.schema.MissingAvroSchemaException;
 import com.pivotal.rabbitmq.schema.SchemaManager;
+import java.io.File;
+import java.io.FileInputStream;
+import java.lang.reflect.Method;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.val;
@@ -19,13 +25,6 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
-
-import java.io.File;
-import java.io.FileInputStream;
-import java.lang.reflect.Method;
-
-import static java.lang.String.format;
-import static java.util.Arrays.asList;
 
 @Configuration
 public class AppConfig {

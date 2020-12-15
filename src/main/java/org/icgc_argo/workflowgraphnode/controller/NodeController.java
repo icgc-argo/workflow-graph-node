@@ -3,6 +3,7 @@ package org.icgc_argo.workflowgraphnode.controller;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pivotal.rabbitmq.source.Sender;
+import java.util.Map;
 import lombok.Data;
 import lombok.NonNull;
 import org.icgc_argo.workflowgraphnode.model.PipeStatus;
@@ -14,8 +15,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
-
-import java.util.Map;
 
 @RestController
 public class NodeController {
