@@ -9,5 +9,4 @@ public class WorkflowGraphNodeApplication {
   public static void main(String[] args) {
     SpringApplication.run(WorkflowGraphNodeApplication.class, args);
   }
-
 }

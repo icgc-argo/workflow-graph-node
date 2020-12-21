@@ -1,0 +1,72 @@
+rabbit:
+  default-endpoint-name: standalone
+  endpoints:
+    standalone:
+      host: localhost
+      port: 5672
+      managementPort:
+
+logging:
+  level:
+    root: INFO
+    org.icgc_argo.workflowgraphnode: INFO
+    com.pivotal.rabbitmq.stream: INFO
+
+rdpc:
+  url: http://localhost:4000/graphql
+
+spring:
+  application:
+    name: wgn-dev
+
+node:
+  localSchemaPath: schema/WorkflowParamsTest.avsc
+  jsonConfigPath: example-node-config.json
+
+---
+spring:
+  profiles: registry
+
+rabbit:
+  default-endpoint-name: standalone
+  endpoints:
+    standalone:
+      host: localhost
+      port: 5672
+      managementPort:
+  schema:
+    registryURL: http://localhost:8990
+
+---
+
+spring:
+  profiles: dev
+
+dev:
+  exchange: ""
+  event:
+    analysisId: ""
+    analysisState: ""
+    analysisType: ""
+    studyId: ""
+    experimentalStrategy: ""
+
+---
+
+spring:
+  profiles: kafka
+
+logging:
+  config: classpath:log4j2-kafka.xml
+
+---
+
+spring:
+  profiles: oauth
+
+oauth:
+  clientCredentials:
+    clientId: foo
+    clientSecret: bar
+    tokenUri: https://example.com
+    publicKeyUri: https://example.com

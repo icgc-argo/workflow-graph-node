@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="info" name="workflow-graph-node" packages="org.icgc_argo">
+    <Properties>
+        <Property name="graphLogMarker">$${env:LOG4J2_GRAPH_LOG_MARKER:-GraphLog}</Property>
+        <Property name="kafka.brokers">$${env:LOG4J2_KAFKA_BROKERS:-localhost:9092}</Property>
+        <Property name="kafka.infoDebugTopic">$${env:LOG4J2_KAFKA_INFO_DEBUG_TOPIC:-graphlog_info_debug}</Property>
+        <Property name="kafka.errorWarningTopic">$${env:LOG4J2_KAFKA_ERROR_WARNING_TOPIC:-graphlog_error_warning}
+        </Property>
+    </Properties>
+
+    <Appenders>
+        <!-- Kafka Audit Appender only forwards messages with the "GraphLog" marker -->
+        <!-- We put only the message here assuming it will be formatted json-->
+        <Kafka name="kafkaDebugInfoLogAppender" topic="${kafka.infoDebugTopic}">
+            <PatternLayout pattern="%message%n"/>
+            <Property name="bootstrap.servers">${kafka.brokers}</Property>
+            <Filters>
+                <ThresholdFilter level="WARN" onMatch="DENY" onMismatch="NEUTRAL"/>
+                <MarkerFilter marker="${graphLogMarker}" onMatch="ACCEPT" onMismatch="DENY"/>
+            </Filters>
+        </Kafka>
+
+        <Kafka name="kafkaWarningErrorLogAppender" topic="${kafka.errorWarningTopic}">
+            <PatternLayout pattern="%message%n"/>
+            <Property name="bootstrap.servers">${kafka.brokers}</Property>
+            <Filters>
+                <ThresholdFilter level="WARN" onMatch="NEUTRAL" onMismatch="DENY"/>
+                <MarkerFilter marker="${graphLogMarker}" onMatch="ACCEPT" onMismatch="DENY"/>
+            </Filters>
+        </Kafka>
+
+        <Console name="stdout" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d{HH:mm:ss.SSS} stdout %highlight{%-5p} [%-7t] %F:%L - %m%n"/>
+            <ThresholdFilter level="WARN" onMatch="DENY" onMismatch="ACCEPT"/>
+        </Console>
+
+        <Console name="stderr" target="SYSTEM_ERR">
+            <PatternLayout pattern="%d{HH:mm:ss.SSS} %highlight{stderr} %highlight{%-5p} [%-7t] %F:%L - %m%n"/>
+            <ThresholdFilter level="WARN" onMatch="ACCEPT" onMismatch="DENY"/>
+        </Console>
+
+    </Appenders>
+    <Loggers>
+        <Root level="INFO">
+            <AppenderRef ref="kafkaDebugInfoLogAppender"/>
+            <AppenderRef ref="kafkaWarningErrorLogAppender"/>
+            <!--stdout/stderr included for testing log4j edits and having console output during development-->
+            <AppenderRef ref="stdout"/>
+            <AppenderRef ref="stderr"/>
+        </Root>
+        <!-- Do not let org.apache.kafka log to a Kafka appender on DEBUG level. That will cause recursive logging -->
+        <Logger name="org.apache.kafka" level="INFO"/>
+    </Loggers>
+</Configuration>

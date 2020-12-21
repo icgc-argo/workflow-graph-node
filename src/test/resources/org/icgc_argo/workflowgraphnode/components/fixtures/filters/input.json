@@ -1,0 +1,34 @@
+[
+  {
+    "id": "b10e6da0-2e99-11eb-adc1-0242ac120002",
+    "analysisId": "d31168d4-5e11-41ff-9168-d45e1151ff6d",
+    "analysisState": "COMPLETE",
+    "analysisType": "variantCall",
+    "studyId": "GRAPH",
+    "experimentalStrategy": "WGS"
+  },
+  {
+    "id": "b10e6da0-2e99-11eb-adc1-0242ac120002",
+    "analysisId": "d31168d4-5e11-41ff-9168-d45e1151ff6d",
+    "analysisState": "COMPLETE",
+    "analysisType": "badAnalysisType",
+    "studyId": "GRAPH",
+    "experimentalStrategy": "WGS"
+  },
+  {
+    "id": "b10e6da0-2e99-11eb-adc1-0242ac120002",
+    "analysisId": "d31168d4-5e11-41ff-9168-d45e1151ff6d",
+    "analysisState": "COMPLETE",
+    "analysisType": "variantCall",
+    "studyId": "BAD-STUDY",
+    "experimentalStrategy": "WGS"
+  },
+  {
+    "id": "b10e6da0-2e99-11eb-adc1-0242ac120002",
+    "analysisId": "d31168d4-5e11-41ff-9168-d45e1151ff6d",
+    "analysisState": "COMPLETE",
+    "analysisType": "badAnalysisTypeAndStudy",
+    "studyId": "BROKEN",
+    "experimentalStrategy": "WGS"
+  }
+]
