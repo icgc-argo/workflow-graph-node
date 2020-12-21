@@ -1,3 +1,10 @@
+server:
+  port : 8080
+
+management:
+  endpoints.web.exposure.include: health
+  health.binders.enabled: true
+
 rabbit:
   default-endpoint-name: standalone
   endpoints:
