@@ -143,6 +143,7 @@ public class NodeConfiguration {
   private Flux<Transaction<RunRequest>> directInputStream() {
     return directInputSource
         .source()
+        .doOnNext(graphTransitAuthority::registerNonEntityTx)
         .handle(verifyParamsWithSchema()) // verify manually provided input matches schema
         .onErrorContinue(Errors.handle())
         .transform(getInputToRunRequestHandler())
