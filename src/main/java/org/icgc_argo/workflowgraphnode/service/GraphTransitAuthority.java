@@ -4,7 +4,6 @@ import com.pivotal.rabbitmq.stream.Transaction;
 import com.pivotal.rabbitmq.stream.Transactional;
 import java.util.HashMap;
 import java.util.Optional;
-
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
@@ -81,7 +80,8 @@ public class GraphTransitAuthority {
    * @param id - Transaction Identifier
    * @return an optional GraphTransitObject registered with the given id
    */
-  public static Optional<GraphTransitObject> getTransactionByIdentifier(Transactional.Identifier id) {
+  public static Optional<GraphTransitObject> getTransactionByIdentifier(
+      Transactional.Identifier id) {
     return Optional.ofNullable(registry.get(id));
   }
 

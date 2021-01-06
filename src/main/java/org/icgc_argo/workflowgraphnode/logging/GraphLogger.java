@@ -1,11 +1,11 @@
 package org.icgc_argo.workflowgraphnode.logging;
 
+import static java.lang.String.format;
+import static org.icgc_argo.workflowgraphnode.service.GraphTransitAuthority.getTransactionByIdentifier;
+
 import com.pivotal.rabbitmq.stream.Transaction;
 import lombok.extern.slf4j.Slf4j;
 import org.icgc_argo.workflowgraphnode.config.NodeProperties;
-
-import static java.lang.String.format;
-import static org.icgc_argo.workflowgraphnode.service.GraphTransitAuthority.getTransactionByIdentifier;
 
 @Slf4j
 public class GraphLogger {
