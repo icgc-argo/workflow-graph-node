@@ -1,16 +1,9 @@
 package org.icgc_argo.workflowgraphnode.rabbitmq;
 
-import static java.lang.String.format;
-
 import com.pivotal.rabbitmq.RabbitEndpointService;
 import com.pivotal.rabbitmq.ReactiveRabbit;
 import com.pivotal.rabbitmq.source.Source;
 import com.pivotal.rabbitmq.stream.Transaction;
-import java.time.Duration;
-import java.util.Map;
-import java.util.function.BiConsumer;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.val;
@@ -33,6 +26,14 @@ import org.springframework.context.annotation.Configuration;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.SynchronousSink;
+
+import java.time.Duration;
+import java.util.Map;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+import static java.lang.String.format;
 
 @Configuration
 public class NodeConfiguration {
@@ -98,6 +99,7 @@ public class NodeConfiguration {
         .then()
         .send(runningToCompleteStream())
         .onErrorContinue(Errors.handle())
+        .doOnNext(tx -> GraphLogger.info(tx, "Completed: %s", tx.get()))
         .subscribe(GraphTransitAuthority::commitAndRemoveTransactionFromGTA);
   }
 

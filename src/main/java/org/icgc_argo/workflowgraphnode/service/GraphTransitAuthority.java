@@ -82,7 +82,7 @@ public class GraphTransitAuthority {
    * @return an optional GraphTransitObject registered with the given id
    */
   public static Optional<GraphTransitObject> getTransactionByIdentifier(Transactional.Identifier id) {
-    return Optional.of(registry.get(id));
+    return Optional.ofNullable(registry.get(id));
   }
 
   /**
