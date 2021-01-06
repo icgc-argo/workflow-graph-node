@@ -1,12 +1,12 @@
 package org.icgc_argo.workflowgraphnode.logging;
 
-import static java.lang.String.format;
-import static org.icgc_argo.workflowgraphnode.service.GraphTransitAuthority.getTransactionByIdentifier;
-
 import com.pivotal.rabbitmq.stream.Transaction;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.icgc_argo.workflowgraphnode.config.NodeProperties;
+
+import static java.lang.String.format;
+import static org.icgc_argo.workflowgraphnode.service.GraphTransitAuthority.getTransactionByIdentifier;
 
 @Slf4j
 public class GraphLogger {
@@ -133,14 +133,21 @@ public class GraphLogger {
    * @return the JSON string representation of the newly created GraphLog object
    */
   private static String graphLog(Transaction<?> tx, String formattedMessage, Object... msgArgs) {
-    val gto = getTransactionByIdentifier(tx.id());
-    return new GraphLog(
-            format(formattedMessage, msgArgs),
-            gto.getMessageId(),
-            gto.getQueue(),
-            gto.getNode(),
-            gto.getPipeline())
-        .toJSON();
+    val graphTransitObject = getTransactionByIdentifier(tx.id());
+
+    if (graphTransitObject.isPresent()) {
+      val gto = graphTransitObject.get();
+
+      return new GraphLog(
+              format(formattedMessage, msgArgs),
+              gto.getMessageId(),
+              gto.getQueue(),
+              gto.getNode(),
+              gto.getPipeline())
+          .toJSON();
+    } else {
+      return String.format("GraphTransitObject with id: %s not found in the Graph Transit Registry, it either never existed or more likely was removed before this log statement", tx.id());
+    }
   }
 
   /**
