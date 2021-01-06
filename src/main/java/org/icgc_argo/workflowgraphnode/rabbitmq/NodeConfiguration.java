@@ -98,7 +98,6 @@ public class NodeConfiguration {
         .then()
         .send(runningToCompleteStream())
         .onErrorContinue(Errors.handle())
-        .doOnNext(tx -> GraphLogger.info(tx, "Completed: %s", tx.get()))
         .subscribe(GraphTransitAuthority::commitAndRemoveTransactionFromGTA);
   }
 
