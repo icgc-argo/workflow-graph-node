@@ -3,6 +3,7 @@ package org.icgc_argo.workflowgraphnode.service;
 import com.pivotal.rabbitmq.stream.Transaction;
 import com.pivotal.rabbitmq.stream.Transactional;
 import java.util.HashMap;
+import java.util.Optional;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
@@ -77,10 +78,11 @@ public class GraphTransitAuthority {
    * Retrieve GraphTransitObject by id
    *
    * @param id - Transaction Identifier
-   * @return the GraphTransitObject registered with the given id
+   * @return an optional GraphTransitObject registered with the given id
    */
-  public static GraphTransitObject getTransactionByIdentifier(Transactional.Identifier id) {
-    return registry.get(id);
+  public static Optional<GraphTransitObject> getTransactionByIdentifier(
+      Transactional.Identifier id) {
+    return Optional.ofNullable(registry.get(id));
   }
 
   /**

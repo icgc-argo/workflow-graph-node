@@ -5,7 +5,6 @@ import static org.icgc_argo.workflowgraphnode.service.GraphTransitAuthority.getT
 
 import com.pivotal.rabbitmq.stream.Transaction;
 import lombok.extern.slf4j.Slf4j;
-import lombok.val;
 import org.icgc_argo.workflowgraphnode.config.NodeProperties;
 
 @Slf4j
@@ -133,13 +132,25 @@ public class GraphLogger {
    * @return the JSON string representation of the newly created GraphLog object
    */
   private static String graphLog(Transaction<?> tx, String formattedMessage, Object... msgArgs) {
-    val gto = getTransactionByIdentifier(tx.id());
-    return new GraphLog(
-            format(formattedMessage, msgArgs),
-            gto.getMessageId(),
-            gto.getQueue(),
-            gto.getNode(),
-            gto.getPipeline())
+    return getTransactionByIdentifier(tx.id())
+        .map(
+            gto ->
+                new GraphLog(
+                    format(formattedMessage, msgArgs),
+                    gto.getMessageId(),
+                    gto.getQueue(),
+                    gto.getNode(),
+                    gto.getPipeline()))
+        .orElseGet(
+            () ->
+                new GraphLog(
+                    format(
+                        "GraphTransitObject with id \"%s\" not found in the Graph Transit Registry, it either never existed or more likely was removed before this log statement",
+                        tx.id()),
+                    "",
+                    "",
+                    "",
+                    ""))
         .toJSON();
   }
 
