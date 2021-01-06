@@ -142,10 +142,11 @@ public class GraphLogger {
                         gto.getNode(),
                         gto.getPipeline())
                     .toJSON())
-        .orElse(
-            String.format(
-                "GraphTransitObject with id: %s not found in the Graph Transit Registry, it either never existed or more likely was removed before this log statement",
-                tx.id()));
+        .orElseGet(
+            () ->
+                String.format(
+                    "GraphTransitObject with id: %s not found in the Graph Transit Registry, it either never existed or more likely was removed before this log statement",
+                    tx.id()));
   }
 
   /**
