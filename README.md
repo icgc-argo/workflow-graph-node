@@ -33,8 +33,8 @@ Handled with log4j2, currently with two possible configs; the default just outpu
 Kafka logging env variables:
 * `LOG4J2_GRAPH_LOG_MARKER` (*default: GraphLog*) - the `org.slf4j.Marker` used to identify logs meant for Kafka
 * `LOG4J2_KAFKA_BROKERS` (*default: localhost:9092*) - Kafka brokers
-* `LOG4J2_KAFKA_INFO_DEBUG_TOPIC` (*default: GraphLog.InfoDebug*) - topic to send logs of level INFO and below
-* `LOG4J2_KAFKA_ERROR_WARNING_TOPIC` (*default: GraphLog.ErrorWarning*) - topic to send logs of WARNING and above
+* `LOG4J2_KAFKA_INFO_DEBUG_TOPIC` (*default: graphlog_info_debug*) - topic to send logs of level INFO and below
+* `LOG4J2_KAFKA_ERROR_WARNING_TOPIC` (*default: graphlog_error_warning*) - topic to send logs of WARNING and above
 
 Logs sent to Kafka are in JSON format corresponding to the out of the `toJSON()` method of the `GraphLog` class
 
