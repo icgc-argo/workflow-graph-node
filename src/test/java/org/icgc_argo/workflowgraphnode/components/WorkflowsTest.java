@@ -89,12 +89,11 @@ public class WorkflowsTest {
                 })
             .collect(toList());
 
-    val handler = Workflows.handleRunStatus(rdpcClientMock);
-
     val source =
         Flux.fromIterable(runIdTransactions)
             .doOnNext(graphTransitAuthority::registerGraphRunTx)
-            .handle(handler);
+            .handle(Workflows.handleRunStatus(rdpcClientMock))
+            .onErrorContinue(Errors.handle());
 
     StepVerifier.create(source)
         // transaction 0 is sent to the next call unchanged in the flux handler
