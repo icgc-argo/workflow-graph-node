@@ -87,7 +87,8 @@ public class GraphTransitAuthority {
 
   /**
    * Commits the transaction and removes it's associated GraphTransitObject from the
-   * GraphTransitAuthority registry
+   * GraphTransitAuthority registry (should only be used in the Errors component or as the final
+   * subscribe consumer)
    *
    * @param tx the transaction to be committed and for which the corresponding GTO should be removed
    *     from the GTA
@@ -99,7 +100,7 @@ public class GraphTransitAuthority {
 
   /**
    * Rejects the transaction and removes it's associated GraphTransitObject from the
-   * GraphTransitAuthority registry
+   * GraphTransitAuthority registry (should only be used in the Errors component)
    *
    * @param tx the transaction to be rejected and for which the corresponding GTO should be removed
    *     from the GTA
@@ -111,7 +112,7 @@ public class GraphTransitAuthority {
 
   /**
    * Requeue (tx.rollback(true)) the transaction and removes it's associated GraphTransitObject from
-   * the GraphTransitAuthority registry
+   * the GraphTransitAuthority registry (should only be used in the Errors component)
    *
    * @param tx the transaction that will requeue and for which the corresponding GTO should be
    *     removed from the GTA

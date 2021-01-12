@@ -1,7 +1,5 @@
 package org.icgc_argo.workflowgraphnode.components;
 
-import static org.icgc_argo.workflowgraphnode.service.GraphTransitAuthority.*;
-
 import com.pivotal.rabbitmq.stream.Transaction;
 import java.util.List;
 import java.util.UUID;
@@ -9,7 +7,9 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.val;
+import org.icgc_argo.workflow_graph_lib.exceptions.CommittableException;
 import org.icgc_argo.workflow_graph_lib.exceptions.DeadLetterQueueableException;
+import org.icgc_argo.workflow_graph_lib.exceptions.RequeueableException;
 import org.icgc_argo.workflow_graph_lib.schema.GraphEvent;
 import org.icgc_argo.workflow_graph_lib.schema.GraphRun;
 import org.icgc_argo.workflow_graph_lib.workflow.client.RdpcClient;
@@ -53,16 +53,16 @@ public class Workflows {
           s -> {
             if (ROLLBACK.contains(s)) {
               GraphLogger.debug(tx, "Requeueing %s with status %s", tx.get().getRunId(), s);
-              requeueAndRemoveTransactionFromGTA(tx);
+              sink.error(new RequeueableException(tx.get().getRunId()));
             } else if (NEXT.contains(s)) {
               GraphLogger.debug(tx, "Nexting %s with status %s", tx.get().getRunId(), s);
               sink.next(tx);
             } else if (REJECT.contains(s)) {
               GraphLogger.debug(tx, "Rejecting %s with status %s", tx.get().getRunId(), s);
-              rejectAndRemoveTransactionFromGTA(tx);
+              sink.error(new DeadLetterQueueableException(tx.get().getRunId()));
             } else if (COMMIT.contains(s)) {
               GraphLogger.debug(tx, "Committing %s with status %s", tx.get().getRunId(), s);
-              commitAndRemoveTransactionFromGTA(tx);
+              sink.error(new CommittableException(tx.get().getRunId()));
             } else {
               GraphLogger.error(tx, "Cannot map workflow status for run: %s.", tx.get().getRunId());
               sink.error(new DeadLetterQueueableException(tx.get().getRunId()));
