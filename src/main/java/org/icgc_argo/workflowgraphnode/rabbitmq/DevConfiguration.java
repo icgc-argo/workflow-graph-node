@@ -8,6 +8,7 @@ import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.icgc_argo.workflow_graph_lib.schema.AnalysisFile;
+import org.icgc_argo.workflow_graph_lib.schema.AnalysisSample;
 import org.icgc_argo.workflow_graph_lib.schema.GraphEvent;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -57,7 +58,15 @@ public class DevConfiguration {
             analysisType,
             studyId,
             experimentalStrategy,
-            List.of("DO123"),
+            List.of(AnalysisSample.newBuilder()
+                    .setSampleId("fakeId")
+                    .setSubmitterSampleId("fakeId")
+                    .setSpecimenId("fakeId")
+                    .setSubmitterSpecimenId("fakeId")
+                    .setDonorId("fakeId")
+                    .setSubmitterDonorId("fakeId")
+                    .setTumourNormalDesignation("Tumour")
+                    .build()),
             List.of(new AnalysisFile("SNV")));
 
     val demoStream = Flux.fromIterable(List.of(demoEvent));
