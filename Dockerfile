@@ -1,7 +1,7 @@
 #############################
 #   Builder
 #############################
-FROM icgcargo/graalvm:java11-20.2.0-extras-1.0.0 as builder
+FROM ghcr.io/icgc-argo/graalvm-docker-image:java11-21.2.0-extras-1.0.0 as builder
 WORKDIR /usr/src/app
 ADD . .
 RUN ./mvnw clean package -DskipTests
@@ -9,7 +9,7 @@ RUN ./mvnw clean package -DskipTests
 #############################
 #   Server
 #############################
-FROM icgcargo/graalvm:java11-20.2.0-extras-1.0.0
+FROM ghcr.io/icgc-argo/graalvm-docker-image:java11-21.2.0-extras-1.0.0
 
 ENV APP_HOME /srv
 ENV APP_USER wfuser
