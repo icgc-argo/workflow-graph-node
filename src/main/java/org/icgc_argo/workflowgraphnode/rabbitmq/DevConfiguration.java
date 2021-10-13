@@ -58,7 +58,8 @@ public class DevConfiguration {
             analysisType,
             studyId,
             experimentalStrategy,
-            List.of(AnalysisSample.newBuilder()
+            List.of(
+                AnalysisSample.newBuilder()
                     .setSampleId("fakeId")
                     .setSubmitterSampleId("fakeId")
                     .setSpecimenId("fakeId")

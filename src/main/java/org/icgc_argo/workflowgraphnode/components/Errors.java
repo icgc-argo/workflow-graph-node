@@ -4,7 +4,9 @@ import static org.icgc_argo.workflowgraphnode.service.GraphTransitAuthority.*;
 
 import com.pivotal.rabbitmq.stream.Transaction;
 import java.util.function.BiConsumer;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import org.icgc_argo.workflow_graph_lib.exceptions.CommittableException;
 import org.icgc_argo.workflow_graph_lib.exceptions.GraphException;
 import org.icgc_argo.workflow_graph_lib.exceptions.NotAcknowledgeableException;
@@ -29,9 +31,17 @@ public class Errors {
    */
   public static BiConsumer<Throwable, Object> handle() {
     return (Throwable throwable, Object obj) -> {
-      if (throwable instanceof GraphException && obj instanceof Transaction<?>) {
-        handleGraphError((GraphException) throwable, (Transaction<?>) obj);
+      if (throwable instanceof GraphException) {
+        val ex = (GraphException) throwable;
+        if (ex.getTransaction().isPresent()) {
+          handleGraphError(ex, ex.getTransaction().get());
+        } else if (obj instanceof Transaction<?>) {
+          handleGraphError(ex, (Transaction<?>) obj);
+        } else {
+          log.warn("Found graph exception with no transaction to handle!", ex);
+        }
       } else if (obj instanceof Transaction<?>) {
+        log.warn("Found transaction with no graph exception!", throwable);
         rejectTransactionOnException(throwable, (Transaction<?>) obj);
       } else {
         log.error("Encountered Error that cannot be handled with GraphExceptions.", throwable);
@@ -39,7 +49,8 @@ public class Errors {
     };
   }
 
-  private static void handleGraphError(GraphException exception, Transaction<?> transaction) {
+  private static void handleGraphError(
+      @NonNull GraphException exception, @NonNull Transaction<?> transaction) {
     if (exception instanceof CommittableException) {
       GraphLogger.error(transaction, "CommittableException when processing: %s", transaction.get());
       GraphLogger.error(transaction, "Nested Exception: %s", exception);

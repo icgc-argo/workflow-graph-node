@@ -31,6 +31,8 @@ public class NodeProperties {
 
   private WorkflowProperties workflow;
 
+  private WorkflowEngineParams workflowEngineParams;
+
   @Data
   @AllArgsConstructor
   @NoArgsConstructor
@@ -55,5 +57,13 @@ public class NodeProperties {
     private String schemaName;
     private String schemaNamespace;
     private String schemaVersion;
+  }
+
+  @Data
+  @RequiredArgsConstructor
+  public static class WorkflowEngineParams {
+    private String workDir;
+    private String launchDir;
+    private String projectDir;
   }
 }

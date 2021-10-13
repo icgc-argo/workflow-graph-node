@@ -61,7 +61,7 @@ public class NodeConfiguration {
 
   @Getter(lazy = true)
   private final Function<Flux<Transaction<Map<String, Object>>>, Flux<Transaction<RunRequest>>>
-      inputToRunRequestHandler = Input.createInputToRunRequestHandler(nodeProperties.getWorkflow());
+      inputToRunRequestHandler = Input.createInputToRunRequestHandler(nodeProperties);
 
   @Autowired
   public NodeConfiguration(
@@ -128,7 +128,7 @@ public class NodeConfiguration {
         .doOnNext(graphTransitAuthority::registerGraphRunTx)
         .delayElements(Duration.ofSeconds(10))
         .doOnNext(tx -> GraphLogger.debug(tx, "Checking status of: %s", tx.get().getRunId()))
-        .handle(Workflows.handleRunStatus(rdpcClient))
+        .flatMap(Workflows.handleRunStatus(rdpcClient))
         .onErrorContinue(Errors.handle())
         .flatMap(Workflows.runAnalysesToGraphEvent(rdpcClient));
   }
