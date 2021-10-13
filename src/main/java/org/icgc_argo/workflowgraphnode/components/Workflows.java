@@ -7,6 +7,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.icgc_argo.workflow_graph_lib.exceptions.CommittableException;
 import org.icgc_argo.workflow_graph_lib.exceptions.DeadLetterQueueableException;
+import org.icgc_argo.workflow_graph_lib.exceptions.GraphException;
 import org.icgc_argo.workflow_graph_lib.exceptions.RequeueableException;
 import org.icgc_argo.workflow_graph_lib.schema.GraphEvent;
 import org.icgc_argo.workflow_graph_lib.schema.GraphRun;
@@ -47,6 +48,7 @@ public class Workflows {
       GraphLogger.debug(tx, "Checking status for: %s", tx.get().getRunId());
       return rdpcClient
           .getWorkflowStatus(tx.get().getRunId())
+          .onErrorMap(GraphException.class, mapToGraphExceptionWithTx(tx))
           .flatMap(
               s -> {
                 if (ROLLBACK.contains(s)) {
@@ -90,5 +92,17 @@ public class Workflows {
                                   tx.commit();
                                   return list;
                                 })));
+  }
+
+  private static Function<GraphException, GraphException> mapToGraphExceptionWithTx(
+      Transaction<?> tx) {
+    return ge -> {
+      try {
+        return ge.getClass().getConstructor(Exception.class, Transaction.class).newInstance(ge, tx);
+      } catch (Exception e) {
+        e.printStackTrace();
+        return ge;
+      }
+    };
   }
 }

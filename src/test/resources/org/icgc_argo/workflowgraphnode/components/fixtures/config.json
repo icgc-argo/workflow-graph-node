@@ -36,5 +36,10 @@
     "schemaName": "WorkflowParamsTest",
     "schemaNamespace": "org.icgc_argo.workflow_graph_lib.schema",
     "schemaVersion": "1"
+  },
+  "workflowEngineParams": {
+    "workDir": "/wfg-node-work",
+    "launchDir": "/wfg-node-launch",
+    "projectDir": "/wfg-node-project"
   }
 }
