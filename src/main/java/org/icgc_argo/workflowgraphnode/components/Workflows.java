@@ -3,12 +3,11 @@ package org.icgc_argo.workflowgraphnode.components;
 import com.pivotal.rabbitmq.stream.Transaction;
 import java.util.List;
 import java.util.UUID;
-import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import lombok.val;
 import org.icgc_argo.workflow_graph_lib.exceptions.CommittableException;
 import org.icgc_argo.workflow_graph_lib.exceptions.DeadLetterQueueableException;
+import org.icgc_argo.workflow_graph_lib.exceptions.GraphException;
 import org.icgc_argo.workflow_graph_lib.exceptions.RequeueableException;
 import org.icgc_argo.workflow_graph_lib.schema.GraphEvent;
 import org.icgc_argo.workflow_graph_lib.schema.GraphRun;
@@ -17,7 +16,6 @@ import org.icgc_argo.workflow_graph_lib.workflow.model.RunRequest;
 import org.icgc_argo.workflowgraphnode.logging.GraphLogger;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.SynchronousSink;
 
 public class Workflows {
 
@@ -44,30 +42,33 @@ public class Workflows {
                         () -> tx.map(new GraphRun(UUID.randomUUID().toString(), response))));
   }
 
-  public static BiConsumer<Transaction<GraphRun>, SynchronousSink<Transaction<GraphRun>>>
-      handleRunStatus(RdpcClient rdpcClient) {
-    return (tx, sink) -> {
+  public static Function<Transaction<GraphRun>, Mono<Transaction<GraphRun>>> handleRunStatus(
+      RdpcClient rdpcClient) {
+    return (tx) -> {
       GraphLogger.debug(tx, "Checking status for: %s", tx.get().getRunId());
-      val status = rdpcClient.getWorkflowStatus(tx.get().getRunId()).doOnError(sink::error);
-      status.subscribe(
-          s -> {
-            if (ROLLBACK.contains(s)) {
-              GraphLogger.debug(tx, "Requeueing %s with status %s", tx.get().getRunId(), s);
-              sink.error(new RequeueableException(tx.get().getRunId()));
-            } else if (NEXT.contains(s)) {
-              GraphLogger.debug(tx, "Nexting %s with status %s", tx.get().getRunId(), s);
-              sink.next(tx);
-            } else if (REJECT.contains(s)) {
-              GraphLogger.debug(tx, "Rejecting %s with status %s", tx.get().getRunId(), s);
-              sink.error(new DeadLetterQueueableException(tx.get().getRunId()));
-            } else if (COMMIT.contains(s)) {
-              GraphLogger.debug(tx, "Committing %s with status %s", tx.get().getRunId(), s);
-              sink.error(new CommittableException(tx.get().getRunId()));
-            } else {
-              GraphLogger.error(tx, "Cannot map workflow status for run: %s.", tx.get().getRunId());
-              sink.error(new DeadLetterQueueableException(tx.get().getRunId()));
-            }
-          });
+      return rdpcClient
+          .getWorkflowStatus(tx.get().getRunId())
+          .onErrorMap(GraphException.class, mapToGraphExceptionWithTx(tx))
+          .flatMap(
+              s -> {
+                if (ROLLBACK.contains(s)) {
+                  GraphLogger.debug(tx, "Requeueing %s with status %s", tx.get().getRunId(), s);
+                  return Mono.error(new RequeueableException(tx.get().getRunId(), tx));
+                } else if (NEXT.contains(s)) {
+                  GraphLogger.debug(tx, "Nexting %s with status %s", tx.get().getRunId(), s);
+                  return Mono.just(tx);
+                } else if (REJECT.contains(s)) {
+                  GraphLogger.debug(tx, "Rejecting %s with status %s", tx.get().getRunId(), s);
+                  return Mono.error(new DeadLetterQueueableException(tx.get().getRunId(), tx));
+                } else if (COMMIT.contains(s)) {
+                  GraphLogger.debug(tx, "Committing %s with status %s", tx.get().getRunId(), s);
+                  return Mono.error(new CommittableException(tx.get().getRunId(), tx));
+                } else {
+                  GraphLogger.error(
+                      tx, "Cannot map workflow status for run: %s.", tx.get().getRunId());
+                  return Mono.error(new DeadLetterQueueableException(tx.get().getRunId(), tx));
+                }
+              });
     };
   }
 
@@ -91,5 +92,17 @@ public class Workflows {
                                   tx.commit();
                                   return list;
                                 })));
+  }
+
+  private static Function<GraphException, GraphException> mapToGraphExceptionWithTx(
+      Transaction<?> tx) {
+    return ge -> {
+      try {
+        return ge.getClass().getConstructor(Exception.class, Transaction.class).newInstance(ge, tx);
+      } catch (Exception e) {
+        e.printStackTrace();
+        return ge;
+      }
+    };
   }
 }

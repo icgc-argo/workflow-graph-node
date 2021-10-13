@@ -30,7 +30,7 @@ public class InputTest {
 
   @Test
   public void testInputToRunRequestHandler() {
-    val handler = Input.createInputToRunRequestHandler(config.getWorkflow());
+    val handler = Input.createInputToRunRequestHandler(config);
 
     Map<String, Object> wfParams = Map.of("studyId", "TEST-CA");
 
