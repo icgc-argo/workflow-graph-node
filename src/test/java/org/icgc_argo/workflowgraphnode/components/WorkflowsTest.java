@@ -85,14 +85,15 @@ public class WorkflowsTest {
                   when(rdpcClientMock.getWorkflowStatus(runIdStatePair.getRunId()))
                       .thenReturn(Mono.just(runIdStatePair.getState()));
 
-                  return wrapWithTransaction(new GraphRun(testingUUID, runIdStatePair.getRunId()));
+                  return wrapWithTransaction(
+                      new GraphRun(UUID.randomUUID().toString(), runIdStatePair.getRunId()));
                 })
             .collect(toList());
 
     val source =
         Flux.fromIterable(runIdTransactions)
             .doOnNext(graphTransitAuthority::registerGraphRunTx)
-            .handle(Workflows.handleRunStatus(rdpcClientMock))
+            .flatMap(Workflows.handleRunStatus(rdpcClientMock))
             .onErrorContinue(Errors.handle());
 
     StepVerifier.create(source)
@@ -127,7 +128,7 @@ public class WorkflowsTest {
     val flux =
         Flux.just(transaction)
             .doOnNext(graphTransitAuthority::registerGraphRunTx)
-            .handle(Workflows.handleRunStatus(rdpcClientMock))
+            .flatMap(Workflows.handleRunStatus(rdpcClientMock))
             .onErrorContinue(Errors.handle());
 
     StepVerifier.create(flux).expectComplete().verify();
