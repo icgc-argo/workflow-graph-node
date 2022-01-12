@@ -15,6 +15,7 @@ import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.icgc_argo.workflowgraphnode.config.AppConfig;
 import org.icgc_argo.workflowgraphnode.config.NodeProperties;
+import org.icgc_argo.workflowgraphnode.model.RestartInput;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -35,14 +36,25 @@ public class TopologyConfiguration {
   }
 
   @Bean
-  OnDemandSource<Map<String, Object>> runRequests() {
-    return new OnDemandSource<>("runRequests");
+  OnDemandSource<Map<String, Object>> directInputSource() {
+    return new OnDemandSource<>("directInputSource");
   }
 
   @Bean
   @Primary
-  Sender<Map<String, Object>> runRequestsSender(OnDemandSource<Map<String, Object>> runRequests) {
-    return runRequests;
+  Sender<Map<String, Object>> directInputSender(OnDemandSource<Map<String, Object>> directInputSource) {
+    return directInputSource;
+  }
+
+  @Bean
+  OnDemandSource<RestartInput> restartInputSource() {
+    return new OnDemandSource<>("restartInputSource");
+  }
+
+  @Bean
+  @Primary
+  Sender<RestartInput> restartInputSender(OnDemandSource<RestartInput> restartInputSource) {
+    return restartInputSource;
   }
 
   public Stream<NodeInput> inputPropertiesAndTopologies() {
