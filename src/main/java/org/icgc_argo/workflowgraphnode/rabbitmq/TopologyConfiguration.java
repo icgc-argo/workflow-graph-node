@@ -35,22 +35,50 @@ public class TopologyConfiguration {
     this.complete = appConfig.getNodeProperties().getComplete();
   }
 
+
+  /**
+   * OnDemandSource used to inject Workflows/Runs directly into nodeConfiguration.
+   * A run needs engineParams and RunParams (i.e. a map) but this source
+   * expectsFlux of RunParams only. The engineParams is generated at
+   * run time with the configured nodeProperties.
+   *
+   * @return OnDemandSource for genrating Flux of run param Transactions.
+   */
   @Bean
   OnDemandSource<Map<String, Object>> directInputSource() {
     return new OnDemandSource<>("directInputSource");
   }
-
+  /**
+   * Used to send events to the directInputSource. Sender is
+   * actually the other half of an OnDemandSource, which allows us to
+   * send events to anyone listening to the source end.
+   *
+   * @return Sender for sending run param Transactions.
+   */
   @Bean
   @Primary
   Sender<Map<String, Object>> directInputSender(OnDemandSource<Map<String, Object>> directInputSource) {
     return directInputSource;
   }
 
+  /**
+   * OnDemandSource used to inject re-run or resume Workflows/Runs into nodeConfiguration.
+   * The source generates RestartInput which has RunParams and sessionId. RunParams is
+   * needed to start a run same as in directInput. The sessionId isn't used by node, but
+   * it needs to be passed to RDPC to decide if run can be resumed.
+   *
+   * @return OnDemandSource for generating Flux of RestartInput Transactions.
+   */
   @Bean
   OnDemandSource<RestartInput> restartInputSource() {
     return new OnDemandSource<>("restartInputSource");
   }
 
+  /**
+   * Used to send events to the restartInputSource.
+   *
+   * @return Sender for sending RestartInput Transactions.
+   */
   @Bean
   @Primary
   Sender<RestartInput> restartInputSender(OnDemandSource<RestartInput> restartInputSource) {
