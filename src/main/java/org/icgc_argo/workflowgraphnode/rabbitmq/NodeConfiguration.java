@@ -27,6 +27,7 @@ import org.icgc_argo.workflowgraphnode.components.Workflows;
 import org.icgc_argo.workflowgraphnode.config.AppConfig;
 import org.icgc_argo.workflowgraphnode.config.NodeProperties;
 import org.icgc_argo.workflowgraphnode.logging.GraphLogger;
+import org.icgc_argo.workflowgraphnode.model.RestartInput;
 import org.icgc_argo.workflowgraphnode.service.GraphTransitAuthority;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
@@ -42,6 +43,7 @@ public class NodeConfiguration {
   private final TopologyConfiguration topologyConfig;
   private final NodeProperties nodeProperties;
   private final Source<Map<String, Object>> directInputSource;
+  private final Source<RestartInput> restartInputSource;
   private final String schemaFullName;
   private final GraphTransitAuthority graphTransitAuthority;
 
@@ -71,6 +73,7 @@ public class NodeConfiguration {
       @NonNull TopologyConfiguration topologyConfig,
       @NonNull AppConfig appConfig,
       @NonNull Source<Map<String, Object>> directInputSource,
+      @NonNull Source<RestartInput> restartInputSource,
       @NonNull GraphTransitAuthority graphTransitAuthority) {
     this.rdpcClient = rdpcClient;
     this.rabbit = rabbit;
@@ -78,6 +81,7 @@ public class NodeConfiguration {
     this.topologyConfig = topologyConfig;
     this.nodeProperties = appConfig.getNodeProperties();
     this.directInputSource = directInputSource;
+    this.restartInputSource = restartInputSource;
     this.graphTransitAuthority = graphTransitAuthority;
     this.schemaFullName =
         format(
@@ -134,7 +138,7 @@ public class NodeConfiguration {
   }
 
   private Flux<Transaction<GraphRun>> mergedInputStreams() {
-    return Flux.merge(directInputStream(), queuedInputStream())
+    return Flux.merge(directInputStream(), queuedInputStream(), restartInputStream())
         .doOnNext(tx -> GraphLogger.info(tx, "Attempting to run workflow with: %s", tx.get()))
         .flatMap(Workflows.startRuns(rdpcClient))
         .onErrorContinue(Errors.handle());
@@ -147,6 +151,34 @@ public class NodeConfiguration {
         .handle(verifyParamsWithSchema()) // verify manually provided input matches schema
         .onErrorContinue(Errors.handle())
         .transform(getInputToRunRequestHandler())
+        .doOnNext(tx -> GraphLogger.info(tx, "Run request created: %s", tx.get()));
+  }
+
+  private Flux<Transaction<RunRequest>> restartInputStream() {
+    return restartInputSource
+        .source()
+        .doOnNext(graphTransitAuthority::registerNonEntityTx)
+        .flatMap(
+            (tx) -> {
+              val restartInput = tx.get();
+              val params = tx.get().getParams();
+              val paramsTxFlux =
+                  Flux.<Transaction<Map<String, Object>>>generate(
+                      sink -> verifyParamsWithSchema().accept(tx.map(params), sink));
+              return paramsTxFlux
+                  .take(1)
+                  .onErrorContinue(Errors.handle())
+                  .transform(getInputToRunRequestHandler())
+                  .map(
+                      runRequestTransaction -> {
+                        val engParams = runRequestTransaction.get().getWorkflowEngineParams();
+                        restartInput.getSessionId().ifPresent(engParams::setResume);
+                        restartInput.getWorkDir().ifPresent(engParams::setWorkDir);
+                        restartInput.getProjectDir().ifPresent(engParams::setProjectDir);
+                        restartInput.getLaunchDir().ifPresent(engParams::setLaunchDir);
+                        return runRequestTransaction;
+                      });
+            })
         .doOnNext(tx -> GraphLogger.info(tx, "Run request created: %s", tx.get()));
   }
 
