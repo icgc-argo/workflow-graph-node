@@ -5,6 +5,7 @@ import lombok.*;
 import org.springframework.http.HttpStatus;
 
 @Getter
+@ToString
 @RequiredArgsConstructor
 @AllArgsConstructor
 public class InvalidRequest extends Throwable {

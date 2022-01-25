@@ -3,15 +3,13 @@ package org.icgc_argo.workflowgraphnode.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pivotal.rabbitmq.source.Sender;
 import java.util.Map;
-import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.val;
-import org.icgc_argo.workflow_graph_lib.graphql.client.GetWorkflowInfoForRestartQuery;
 import org.icgc_argo.workflow_graph_lib.workflow.client.RdpcClient;
 import org.icgc_argo.workflowgraphnode.config.NodeProperties;
 import org.icgc_argo.workflowgraphnode.controller.InvalidRequest;
-import org.icgc_argo.workflowgraphnode.model.RestartRequest;
 import org.icgc_argo.workflowgraphnode.model.RestartInput;
+import org.icgc_argo.workflowgraphnode.model.RestartRequest;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
@@ -30,10 +28,7 @@ public class WorkflowService {
   }
 
   public Mono<Boolean> restart(RestartRequest request) {
-    return createParamsForRestart(request)
-        .map(restartInputSender::send)
-        .thenReturn(true)
-        .onErrorReturn(false);
+    return createParamsForRestart(request).map(restartInputSender::send).thenReturn(true);
   }
 
   private Mono<RestartInput> createParamsForRestart(RestartRequest request) {
@@ -51,37 +46,23 @@ public class WorkflowService {
               }
               val engParam = run.getEngineParameters().get();
 
-              if (!isMatchingConfiguredEngineParams(engParam)) {
-                return Mono.error(
-                    new InvalidRequest(
-                        "Run to restart has conflicting engine params with this node!",
-                        Map.of(
-                            "nodeConfig",
-                            nodeProperties.getWorkflowEngineParams(),
-                            "runConfig",
-                            engParam)));
-              }
+              val builder = RestartInput.builder();
 
-              val sessionId = run.getSessionId().get();
+              run.getSessionId().ifPresent(builder::sessionId);
+
+              engParam.getWorkDir().ifPresent(builder::workDir);
+              engParam.getLaunchDir().ifPresent(builder::launchDir);
+              engParam.getProjectDir().ifPresent(builder::projectDir);
 
               if (!request.getParams().isEmpty()) {
-                return Mono.just(new RestartInput(request.getParams(), sessionId));
+                builder.params(request.getParams());
+              } else if (run.getParameters().isPresent()) {
+                builder.params(MAPPER.convertValue(run.getParameters().get(), Map.class));
               } else {
-                return Mono.just(
-                    new RestartInput(
-                        MAPPER.convertValue(run.getParameters().get(), Map.class), sessionId));
+                builder.params(Map.of());
               }
-            });
-  }
 
-  private Boolean isMatchingConfiguredEngineParams(
-      GetWorkflowInfoForRestartQuery.EngineParameters params) {
-    return Optional.of(nodeProperties.getWorkflowEngineParams().getWorkDir())
-            .equals(params.getWorkDir())
-        && Optional.of(nodeProperties.getWorkflowEngineParams().getLaunchDir())
-            .equals(params.getLaunchDir())
-        && Optional.of(nodeProperties.getWorkflowEngineParams().getProjectDir())
-            .equals(params.getProjectDir())
-        && Optional.of(nodeProperties.getWorkflow().getRevision()).equals(params.getRevision());
+              return Mono.just(builder.build());
+            });
   }
 }

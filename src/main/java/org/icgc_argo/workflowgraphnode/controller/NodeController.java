@@ -2,6 +2,7 @@ package org.icgc_argo.workflowgraphnode.controller;
 
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.icgc_argo.workflowgraphnode.model.PipeStatus;
 import org.icgc_argo.workflowgraphnode.model.RestartRequest;
 import org.icgc_argo.workflowgraphnode.service.PipelineManager;
@@ -11,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 
+@Slf4j
 @RestController
 @RequiredArgsConstructor
 public class NodeController {
@@ -36,6 +38,7 @@ public class NodeController {
 
   @ExceptionHandler
   public ResponseEntity<String> handle(Throwable ex) {
+    log.error(ex.toString());
     if (ex instanceof InvalidRequest) {
       return new ResponseEntity<>(ex.toString(), ((InvalidRequest) ex).getStatusCode());
     } else {

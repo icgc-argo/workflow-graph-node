@@ -160,19 +160,22 @@ public class NodeConfiguration {
         .doOnNext(graphTransitAuthority::registerNonEntityTx)
         .flatMap(
             (tx) -> {
+              val restartInput = tx.get();
               val params = tx.get().getParams();
-              val sessionId = tx.get().getSessionId();
               val paramsTxFlux =
                   Flux.<Transaction<Map<String, Object>>>generate(
                       sink -> verifyParamsWithSchema().accept(tx.map(params), sink));
               return paramsTxFlux
+                  .take(1)
                   .onErrorContinue(Errors.handle())
                   .transform(getInputToRunRequestHandler())
                   .map(
                       runRequestTransaction -> {
-                        sessionId.ifPresent(
-                            s ->
-                                runRequestTransaction.get().getWorkflowEngineParams().setResume(s));
+                        val engParams = runRequestTransaction.get().getWorkflowEngineParams();
+                        restartInput.getSessionId().ifPresent(engParams::setResume);
+                        restartInput.getWorkDir().ifPresent(engParams::setWorkDir);
+                        restartInput.getProjectDir().ifPresent(engParams::setProjectDir);
+                        restartInput.getLaunchDir().ifPresent(engParams::setLaunchDir);
                         return runRequestTransaction;
                       });
             })

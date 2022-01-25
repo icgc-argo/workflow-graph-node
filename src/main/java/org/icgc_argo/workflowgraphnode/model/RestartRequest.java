@@ -1,17 +1,13 @@
 package org.icgc_argo.workflowgraphnode.model;
 
+import java.util.HashMap;
 import java.util.Map;
-import lombok.AllArgsConstructor;
-import lombok.Value;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-@Value
-@AllArgsConstructor
+@Data
+@NoArgsConstructor
 public class RestartRequest {
-  String runId;
-  Map<String, Object> params;
-
-  public RestartRequest(String runId) {
-    this.runId = runId;
-    this.params = Map.of();
-  }
+  private String runId;
+  private Map<String, Object> params = new HashMap<>();
 }
