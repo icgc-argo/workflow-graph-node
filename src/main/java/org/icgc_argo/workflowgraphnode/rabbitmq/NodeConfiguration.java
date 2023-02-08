@@ -13,6 +13,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.NonNull;
+import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.apache.avro.AvroRuntimeException;
 import org.icgc_argo.workflow_graph_lib.exceptions.DeadLetterQueueableException;
@@ -36,6 +37,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.SynchronousSink;
 
 @Configuration
+@Slf4j
 public class NodeConfiguration {
   private final RdpcClient rdpcClient;
   private final RabbitEndpointService rabbit;
@@ -187,14 +189,27 @@ public class NodeConfiguration {
     return Flux.merge(
             topologyConfig
                 .inputPropertiesAndTopologies()
-                .map(
+                /*.map(
                     input ->
                         rabbit
                             .declareTopology(input.getTopologyBuilder())
                             .createTransactionalConsumerStream(
                                 input.getProperties().getQueue(), GraphEvent.class)
                             .receive()
-                            .doOnNext(graphTransitAuthority::registerGraphEventTx))
+                            .doOnNext(graphTransitAuthority::registerGraphEventTx))*/
+                .map(
+                    input -> {
+                      log.info("queuedInputStream: input -- "+input.toString());
+                      return rabbit
+                          .declareTopology(input.getTopologyBuilder())
+                          .createTransactionalConsumerStream(
+                              input.getProperties().getQueue(), GraphEvent.class)
+                          .receive()
+                          .map(tx -> {
+                            log.info("input transaction: "+tx.get());
+                            log.info("input transaction identifier: "+tx.id());
+                            return tx;})
+                          .doOnNext(graphTransitAuthority::registerGraphEventTx);})
                 .collect(Collectors.toList()))
         .transform(getFilterTransformer())
         .transform(getGqlQueryTransformer())
