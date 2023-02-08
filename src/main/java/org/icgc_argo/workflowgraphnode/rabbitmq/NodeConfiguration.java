@@ -199,6 +199,7 @@ public class NodeConfiguration {
                             .doOnNext(graphTransitAuthority::registerGraphEventTx))*/
                 .map(
                     input -> {
+
                       log.debug("queuedInputStream: input -- "+input.toString());
                       return rabbit
                           .declareTopology(input.getTopologyBuilder())
