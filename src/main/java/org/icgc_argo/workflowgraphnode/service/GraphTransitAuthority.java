@@ -23,10 +23,7 @@ public class GraphTransitAuthority {
 
   private static final HashMap<Transactional.Identifier, GraphTransitObject> registry =
       new HashMap<>();
-
-  private static final HashMap<Transactional.Identifier, GraphTransitObject> registry_copy =
-      new HashMap<>();
-
+  
   @Autowired
   public GraphTransitAuthority(@NonNull AppConfig appConfig) {
     this.pipeline = appConfig.getNodeProperties().getPipelineId();
@@ -131,7 +128,6 @@ public class GraphTransitAuthority {
   private static GraphTransitObject putGTOinRegistry(
       Transactional.Identifier id, GraphTransitObject gto) {
     log.info(("putGTOinRegistry: identifier: "+id));
-    registry_copy.put(id, gto);
     val result = registry.put(id, gto);
     if (result != null) {
       log.warn(
@@ -145,7 +141,6 @@ public class GraphTransitAuthority {
           gto);
     }
     log.info(("putGTOinRegistry: registry: "+registry));
-    log.info(("putGTOinRegistry: registry_copy: "+registry_copy));
     return result;
   }
 
