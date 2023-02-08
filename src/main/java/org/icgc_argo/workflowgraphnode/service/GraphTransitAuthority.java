@@ -23,7 +23,6 @@ public class GraphTransitAuthority {
 
   private static final HashMap<Transactional.Identifier, GraphTransitObject> registry =
       new HashMap<>();
-  
   @Autowired
   public GraphTransitAuthority(@NonNull AppConfig appConfig) {
     this.pipeline = appConfig.getNodeProperties().getPipelineId();
