@@ -199,15 +199,16 @@ public class NodeConfiguration {
                             .doOnNext(graphTransitAuthority::registerGraphEventTx))*/
                 .map(
                     input -> {
-                      log.info("queuedInputStream: input -- "+input.toString());
+
+                      log.debug("queuedInputStream: input -- "+input.toString());
                       return rabbit
                           .declareTopology(input.getTopologyBuilder())
                           .createTransactionalConsumerStream(
                               input.getProperties().getQueue(), GraphEvent.class)
                           .receive()
                           .map(tx -> {
-                            log.info("input transaction: "+tx.get());
-                            log.info("input transaction identifier: "+tx.id());
+                            log.debug("input transaction: "+tx.get());
+                            log.debug("input transaction identifier: "+tx.id());
                             return tx;})
                           .doOnNext(graphTransitAuthority::registerGraphEventTx);})
                 .collect(Collectors.toList()))
