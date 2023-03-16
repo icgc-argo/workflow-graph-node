@@ -83,8 +83,10 @@ spec:
         }
         stage('Build & Publish Edge Image') {
             when {
-                branch "develop"
-                branch "polyglot_context_synchronization_test"
+                anyOf {
+                    branch "develop"
+                    branch "polyglot_context_synchronization_test"
+                }
             }
             steps {
                 container('docker') {
