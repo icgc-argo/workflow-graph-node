@@ -1,10 +1,10 @@
 package org.icgc_argo.workflowgraphnode.components;
 
-//import static org.icgc_argo.workflow_graph_lib.polyglot.Polyglot.evaluateBooleanExpression;
-//import static org.icgc_argo.workflow_graph_lib.polyglot.Polyglot.runMainFunctionWithData;
+import static org.icgc_argo.workflow_graph_lib.polyglot.Polyglot.evaluateBooleanExpression;
+import static org.icgc_argo.workflow_graph_lib.polyglot.Polyglot.runMainFunctionWithData;
 
-import static org.icgc_argo.workflowgraphnode.rabbitmq.PolyglotCustom.evaluateBooleanExpression;
-import static org.icgc_argo.workflowgraphnode.rabbitmq.PolyglotCustom.runMainFunctionWithData;
+//import static org.icgc_argo.workflowgraphnode.rabbitmq.PolyglotCustom.evaluateBooleanExpression;
+//import static org.icgc_argo.workflowgraphnode.rabbitmq.PolyglotCustom.runMainFunctionWithData;
 
 import static org.icgc_argo.workflow_graph_lib.utils.JacksonUtils.toMap;
 
