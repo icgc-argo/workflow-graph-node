@@ -30,12 +30,12 @@
         </Kafka>
 
         <Console name="stdout" target="SYSTEM_OUT">
-            <PatternLayout pattern="%d{HH:mm:ss.SSS} stdout %highlight{%-5p} [%-7t] %F:%L - %m%n"/>
+            <PatternLayout pattern="%d{yyyy:mm:dd HH:mm:ss.SSS} stdout %highlight{%-5p} [%-7t] %F:%L - %m%n"/>
             <ThresholdFilter level="WARN" onMatch="DENY" onMismatch="ACCEPT"/>
         </Console>
 
         <Console name="stderr" target="SYSTEM_ERR">
-            <PatternLayout pattern="%d{HH:mm:ss.SSS} %highlight{stderr} %highlight{%-5p} [%-7t] %F:%L - %m%n"/>
+            <PatternLayout pattern="%d{yyyy:mm:dd HH:mm:ss.SSS} %highlight{stderr} %highlight{%-5p} [%-7t] %F:%L - %m%n"/>
             <ThresholdFilter level="WARN" onMatch="ACCEPT" onMismatch="DENY"/>
         </Console>
 
