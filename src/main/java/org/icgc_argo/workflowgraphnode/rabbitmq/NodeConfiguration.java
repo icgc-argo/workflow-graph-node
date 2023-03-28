@@ -139,21 +139,18 @@ public class NodeConfiguration {
         .flatMap(Workflows.runAnalysesToGraphEvent(rdpcClient));
   }
 
- /* private Flux<Transaction<GraphRun>> mergedInputStreams() {
+  private Flux<Transaction<GraphRun>> mergedInputStreams() {
     return Flux.merge(directInputStream(), queuedInputStream(), restartInputStream())
         .doOnNext(tx -> GraphLogger.info(tx, "Attempting to run workflow with: %s", tx.get()))
         .flatMap(Workflows.startRuns(rdpcClient))
         .onErrorContinue(Errors.handle());
-  }*/
-
-  private Flux<Transaction<GraphRun>> mergedInputStreams() {
-    return Flux.merge(directInputStream(), queuedInputStream(), restartInputStream())
-        .doOnNext(tx -> GraphLogger.info(tx, "Attempting to run workflow with: %s", tx.get()))
-        .collectList()
-        .map( txList ->  {return Workflows.startRuns(rdpcClient);})
-        //.flatMap(Workflows.startRuns(rdpcClient))
-        .onErrorContinue(Errors.handle());
   }
+
+ /* private Flux<Transaction<GraphRun>> mergedInputStreams() {
+    return Flux.merge(directInputStream(), queuedInputStream(), restartInputStream())
+        .map(tx -> {})
+
+  }*/
 
   private Flux<Transaction<RunRequest>> directInputStream() {
     return directInputSource
