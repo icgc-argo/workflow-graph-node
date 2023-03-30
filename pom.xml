@@ -64,7 +64,7 @@
         <dependency>
             <groupId>org.icgc_argo</groupId>
             <artifactId>workflow-graph-lib</artifactId>
-            <version>1.10.9-TEST</version>
+            <version>1.10.10-TEST</version>
         </dependency>
 
         <!-- Logging -->
