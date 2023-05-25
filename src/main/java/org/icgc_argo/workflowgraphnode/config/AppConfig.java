@@ -177,4 +177,9 @@ public class AppConfig {
   public RdpcClient createRdpcClientWithAuth(ClientCredentials clientCredentials) {
     return new RdpcClient(rdpcUrl, 60L, clientCredentials);
   }
+
+  @Bean
+  public NodeProperties nodeProperties() {
+    return this.nodeProperties;
+  }
 }
