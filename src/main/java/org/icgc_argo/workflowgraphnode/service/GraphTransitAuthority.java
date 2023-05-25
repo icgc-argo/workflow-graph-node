@@ -23,7 +23,6 @@ public class GraphTransitAuthority {
 
   private static final HashMap<Transactional.Identifier, GraphTransitObject> registry =
       new HashMap<>();
-
   @Autowired
   public GraphTransitAuthority(@NonNull AppConfig appConfig) {
     this.pipeline = appConfig.getNodeProperties().getPipelineId();
@@ -45,6 +44,7 @@ public class GraphTransitAuthority {
    */
   public GraphTransitObject registerGraphEventTx(Transaction<GraphEvent> tx) {
     val gto = new GraphTransitObject(pipeline, node, tx.id().getName(), tx.get().getId());
+    log.debug(("registerGraphEventTx: tx: "+tx.get()+" -- id: "+tx.id()));
     return putGTOinRegistry(tx.id(), gto);
   }
 
@@ -58,6 +58,7 @@ public class GraphTransitAuthority {
    */
   public GraphTransitObject registerGraphRunTx(Transaction<GraphRun> tx) {
     val gto = new GraphTransitObject(pipeline, node, tx.id().getName(), tx.get().getId());
+    log.debug(("registerGraphRunTx: tx: "+tx.get()+" -- id: "+tx.id()));
     return putGTOinRegistry(tx.id(), gto);
   }
 
@@ -71,6 +72,7 @@ public class GraphTransitAuthority {
    */
   public GraphTransitObject registerNonEntityTx(Transaction<?> tx) {
     val gto = new GraphTransitObject(pipeline, node, tx.id().getName(), "NON-GRAPH-ENTITY");
+    log.debug(("registerNonEntityTx: tx: "+tx.get()+" -- id: "+tx.id()));
     return putGTOinRegistry(tx.id(), gto);
   }
 
@@ -124,6 +126,7 @@ public class GraphTransitAuthority {
 
   private static GraphTransitObject putGTOinRegistry(
       Transactional.Identifier id, GraphTransitObject gto) {
+    log.debug(("putGTOinRegistry: identifier: "+id));
     val result = registry.put(id, gto);
     if (result != null) {
       log.warn(
@@ -136,10 +139,12 @@ public class GraphTransitAuthority {
           id,
           gto);
     }
+    log.debug(("putGTOinRegistry: registry: "+registry));
     return result;
   }
 
   private static GraphTransitObject removeTransactionFromGTARegistry(Transactional.Identifier id) {
+    log.debug(("putGTOinRegistry: removing from registry: "+id));
     val result = registry.remove(id);
 
     if (result == null) {
@@ -152,7 +157,7 @@ public class GraphTransitAuthority {
           id,
           result);
     }
-
+    log.debug(("putGTOinRegistry: registry after clearing: "+registry));
     return result;
   }
 }
