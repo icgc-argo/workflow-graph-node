@@ -10,7 +10,7 @@
     </parent>
 
     <artifactId>workflow-graph-node</artifactId>
-    <version>1.4.0-SNAPSHOT</version>
+    <version>1.5.0-SNAPSHOT</version>
     <name>workflow-graph-node</name>
     <description>Workflow Graph Node</description>
 
@@ -64,6 +64,7 @@
         <dependency>
             <groupId>org.icgc_argo</groupId>
             <artifactId>workflow-graph-lib</artifactId>
+            <version>1.11.0</version>
         </dependency>
 
         <!-- Logging -->
